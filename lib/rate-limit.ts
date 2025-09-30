@@ -13,34 +13,41 @@ function keyFromReq(req: NextRequest) {
   return ip
 }
 
+export function checkRateLimit(req: NextRequest, maxRequests = 60, windowMs = 60000) {
+  const key = keyFromReq(req)
+  const now = Date.now()
+  const capacity = maxRequests
+  const refillPerMs = capacity / windowMs
+
+  let b = buckets.get(key)
+  if (!b) {
+    b = { tokens: capacity, updatedAt: now }
+    buckets.set(key, b)
+  }
+
+  const elapsed = now - b.updatedAt
+  b.tokens = Math.min(capacity, b.tokens + elapsed * refillPerMs)
+  b.updatedAt = now
+
+  if (b.tokens < 1) {
+    return { allowed: false }
+  }
+
+  b.tokens -= 1
+  return { allowed: true }
+}
+
 interface RateLimitConfig {
   windowMs: number
   maxRequests: number
 }
 
 export function rateLimit(config: RateLimitConfig) {
-  const CAPACITY = config.maxRequests
-  const REFILL_PER_MS = CAPACITY / config.windowMs
-
   return async (req: NextRequest) => {
-    const key = keyFromReq(req)
-    const now = Date.now()
-    let b = buckets.get(key)
-
-    if (!b) {
-      b = { tokens: CAPACITY, updatedAt: now }
-      buckets.set(key, b)
-    }
-
-    const elapsed = now - b.updatedAt
-    b.tokens = Math.min(CAPACITY, b.tokens + elapsed * REFILL_PER_MS)
-    b.updatedAt = now
-
-    if (b.tokens < 1) {
+    const result = checkRateLimit(req, config.maxRequests, config.windowMs)
+    if (!result.allowed) {
       return NextResponse.json({ success: false, error: "Too many requests" }, { status: 429 })
     }
-
-    b.tokens -= 1
     return null
   }
 }

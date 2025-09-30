@@ -5,11 +5,11 @@
 import dbConnect from "@/lib/dbConnect"
 import AuditLog from "@/models/AuditLog"
 
-export interface AuditLogData {
-  userId: string
+interface AuditLogData {
+  userId?: string
   action: string
   resourceType: string
-  resourceId: string
+  resourceId?: string
   details?: Record<string, any>
   ipAddress?: string
   userAgent?: string
@@ -27,20 +27,33 @@ export async function auditLog(data: AuditLogData): Promise<void> {
   }
 }
 
-export async function getUserActivity(userId: string, limit = 50): Promise<any[]> {
+export async function getAuditLogs(
+  filters: {
+    userId?: string
+    resourceType?: string
+    resourceId?: string
+    startDate?: Date
+    endDate?: Date
+  },
+  limit = 100,
+  offset = 0,
+) {
   await dbConnect()
-  return await AuditLog.find({ userId }).sort({ timestamp: -1 }).limit(limit).lean()
-}
+  const query: any = {}
 
-export async function getResourceActivity(resourceType: string, resourceId: string): Promise<any[]> {
-  await dbConnect()
-  return await AuditLog.find({ resourceType, resourceId })
-    .populate("userId", "name email")
-    .sort({ timestamp: -1 })
-    .lean()
-}
+  if (filters.userId) query.userId = filters.userId
+  if (filters.resourceType) query.resourceType = filters.resourceType
+  if (filters.resourceId) query.resourceId = filters.resourceId
+  if (filters.startDate || filters.endDate) {
+    query.timestamp = {}
+    if (filters.startDate) query.timestamp.$gte = filters.startDate
+    if (filters.endDate) query.timestamp.$lte = filters.endDate
+  }
 
-export async function getSystemActivity(limit = 100): Promise<any[]> {
-  await dbConnect()
-  return await AuditLog.find().populate("userId", "name email").sort({ timestamp: -1 }).limit(limit).lean()
+  const [logs, total] = await Promise.all([
+    AuditLog.find(query).sort({ timestamp: -1 }).limit(limit).skip(offset),
+    AuditLog.countDocuments(query),
+  ])
+
+  return { logs, total }
 }
