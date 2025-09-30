@@ -2,12 +2,10 @@
  * Project: Vitamend
  * Creator: Rachit Kumar Tiwari
  */
-import type { NextRequest } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 type Bucket = { tokens: number; updatedAt: number }
 const buckets = new Map<string, Bucket>()
-const CAPACITY = Number(process.env.RATE_LIMIT_CAPACITY || 60)
-const REFILL_PER_SEC = Number(process.env.RATE_LIMIT_REFILL || 1)
 
 function keyFromReq(req: NextRequest) {
   const xf = req.headers.get("x-forwarded-for") || ""
@@ -15,18 +13,34 @@ function keyFromReq(req: NextRequest) {
   return ip
 }
 
-export function checkRateLimit(req: NextRequest) {
-  const key = keyFromReq(req)
-  const now = Date.now() / 1000
-  let b = buckets.get(key)
-  if (!b) {
-    b = { tokens: CAPACITY, updatedAt: now }
-    buckets.set(key, b)
+interface RateLimitConfig {
+  windowMs: number
+  maxRequests: number
+}
+
+export function rateLimit(config: RateLimitConfig) {
+  const CAPACITY = config.maxRequests
+  const REFILL_PER_MS = CAPACITY / config.windowMs
+
+  return async (req: NextRequest) => {
+    const key = keyFromReq(req)
+    const now = Date.now()
+    let b = buckets.get(key)
+
+    if (!b) {
+      b = { tokens: CAPACITY, updatedAt: now }
+      buckets.set(key, b)
+    }
+
+    const elapsed = now - b.updatedAt
+    b.tokens = Math.min(CAPACITY, b.tokens + elapsed * REFILL_PER_MS)
+    b.updatedAt = now
+
+    if (b.tokens < 1) {
+      return NextResponse.json({ success: false, error: "Too many requests" }, { status: 429 })
+    }
+
+    b.tokens -= 1
+    return null
   }
-  const elapsed = now - b.updatedAt
-  b.tokens = Math.min(CAPACITY, b.tokens + elapsed * REFILL_PER_SEC)
-  b.updatedAt = now
-  if (b.tokens < 1) return { allowed: false }
-  b.tokens -= 1
-  return { allowed: true }
 }

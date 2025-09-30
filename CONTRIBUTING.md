@@ -73,7 +73,7 @@ Thank you for contributing to VitaMend! 🙏
 
 Create a LICENSE file:
 
-```plaintext file="LICENSE"
+\`\`\`plaintext file="LICENSE"
 MIT License
 
 Copyright (c) 2024 VitaMend
