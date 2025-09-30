@@ -1,0 +1,196 @@
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Heart, Users, Shield, Award, ArrowRight } from "lucide-react"
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+      <section className="container mx-auto flex flex-col items-center gap-6 px-4 py-16 text-center">
+        {/* Logo using Source URL */}
+        <img
+          src="/images/design-mode/VITAMEND_LOGO.png"
+          alt="VitaMend logo"
+          className="h-20 w-20"
+          loading="eager"
+        />
+        <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+          Reviving Medicines, Restoring Lives
+        </h1>
+        <p className="max-w-2xl text-pretty text-lg text-slate-600">
+          Donate your unused medicines. Our AI verifies safety and authenticity. We redistribute to people in need via
+          trusted NGO partners.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/donate"
+            className="rounded-md bg-emerald-600 px-5 py-3 font-medium text-white hover:bg-emerald-700"
+          >
+            Donate Medicines
+          </Link>
+          <Link
+            href="/volunteer"
+            className="rounded-md border border-slate-300 px-5 py-3 font-medium text-slate-800 hover:bg-slate-50"
+          >
+            Become a Volunteer
+          </Link>
+        </div>
+
+        {/* Impact stats preview */}
+        <div className="mt-10 grid w-full max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            { label: "Donations", value: "1,248+" },
+            { label: "Verified", value: "1,102" },
+            { label: "Distributed", value: "18,420 doses" },
+            { label: "NGO Partners", value: "32" },
+          ].map((s) => (
+            <div key={s.label} className="rounded-lg border bg-white p-4 text-center">
+              <div className="text-xl font-semibold text-slate-900">{s.value}</div>
+              <div className="text-xs text-slate-500">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">How VitaMend Works</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Our simple, secure process ensures your donated medicines reach those who need them most
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Heart className="h-8 w-8 text-green-600" />
+                </div>
+                <CardTitle className="text-xl">1. Donate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Upload photos of your unused, unexpired medicines through our secure platform
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="h-8 w-8 text-blue-600" />
+                </div>
+                <CardTitle className="text-xl">2. Verify</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Our AI system and certified pharmacists verify medicine quality and authenticity
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-purple-600" />
+                </div>
+                <CardTitle className="text-xl">3. Connect</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  We match verified medicines with verified NGOs and healthcare providers
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Award className="h-8 w-8 text-orange-600" />
+                </div>
+                <CardTitle className="text-xl">4. Impact</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Track your real-world impact and see how your donations help communities
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why Choose VitaMend?</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              We've built the most trusted and efficient platform for medicine donation
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <Shield className="h-10 w-10 text-green-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">AI-Powered Verification</h3>
+              <p className="text-gray-600">
+                Advanced AI technology combined with expert pharmacist review ensures only safe, quality medicines are
+                redistributed.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <Heart className="h-10 w-10 text-red-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Direct Impact</h3>
+              <p className="text-gray-600">
+                See exactly how your donations help real people in your community and beyond with detailed impact
+                reports.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <Users className="h-10 w-10 text-blue-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Trusted Network</h3>
+              <p className="text-gray-600">
+                We work with verified NGOs, hospitals, and healthcare providers to ensure medicines reach those in need.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Ready to Make a Difference?</h2>
+            <p className="text-xl text-gray-600 mb-8">
+              Join thousands of donors and volunteers who are helping to reduce medical waste and improve healthcare
+              access for everyone.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3">
+                <Link href="/auth/signup" className="flex items-center gap-2">
+                  Get Started Today
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-3 bg-transparent"
+              >
+                <Link href="/about">Learn More</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  )
+}
