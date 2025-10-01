@@ -3,118 +3,67 @@
  * Creator: Rachit Kumar Tiwari
  */
 
-export interface MedicineVerificationResult {
+interface VerificationResult {
   isValid: boolean
   confidence: number
-  detectedMedicine?: {
-    name: string
-    dosage?: string
-    form?: string
-  }
-  expiryDate?: Date
-  batchNumber?: string
-  manufacturer?: string
   issues: string[]
-  recommendations: string[]
+  recommendation: string
+  details?: Record<string, any>
 }
 
-interface VerifyMedicineInput {
+interface MedicineInput {
   imageUrl: string
   medicineName?: string
   batchNumber?: string
   expiryDate?: string
 }
 
-export class MedicineVerificationService {
-  private static readonly KNOWN_MEDICINES = [
-    "Paracetamol",
-    "Ibuprofen",
-    "Aspirin",
-    "Amoxicillin",
-    "Metformin",
-    "Atorvastatin",
-    "Omeprazole",
-    "Losartan",
-    "Amlodipine",
-  ]
+export async function verifyMedicine(input: MedicineInput): Promise<VerificationResult> {
+  const issues: string[] = []
+  let confidence = 0.95
 
-  private static readonly CONTROLLED_SUBSTANCES = ["Morphine", "Codeine", "Tramadol", "Diazepam", "Lorazepam"]
-
-  static async verifyMedicine(input: VerifyMedicineInput): Promise<MedicineVerificationResult> {
-    const issues: string[] = []
-    const recommendations: string[] = []
-    let isValid = true
-    let confidence = 0.85
-
-    if (!input.imageUrl) {
-      issues.push("No image provided")
-      isValid = false
-      confidence = 0
-    }
-
-    if (input.medicineName) {
-      const recognized = this.KNOWN_MEDICINES.some(
-        (known) =>
-          known.toLowerCase().includes(input.medicineName!.toLowerCase()) ||
-          input.medicineName!.toLowerCase().includes(known.toLowerCase()),
-      )
-
-      if (recognized) {
-        const isControlled = this.CONTROLLED_SUBSTANCES.some((controlled) =>
-          input.medicineName!.toLowerCase().includes(controlled.toLowerCase()),
-        )
-        if (isControlled) {
-          issues.push("Controlled substance detected - requires special handling")
-          recommendations.push("Contact pharmacy for proper disposal procedures")
-          isValid = false
-        }
-      } else {
-        issues.push("Medicine not recognized in our database")
-        recommendations.push("Please verify medicine name manually")
-      }
-    }
-
-    if (input.expiryDate) {
-      const expiry = new Date(input.expiryDate)
-      const now = new Date()
-      if (expiry < now) {
-        issues.push("Medicine has expired")
-        isValid = false
-      } else {
-        const monthsUntilExpiry = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30))
-        if (monthsUntilExpiry < 6) {
-          recommendations.push("Medicine expires soon - prioritize for distribution")
-        }
-      }
-    }
-
-    if (!input.batchNumber) {
-      recommendations.push("Batch number not provided - manual verification recommended")
-    }
-
+  if (!input.imageUrl) {
     return {
-      isValid,
-      confidence,
-      detectedMedicine: input.medicineName
-        ? {
-            name: input.medicineName,
-            dosage: undefined,
-            form: undefined,
-          }
-        : undefined,
-      expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
-      batchNumber: input.batchNumber,
-      manufacturer: undefined,
-      issues,
-      recommendations,
+      isValid: false,
+      confidence: 0,
+      issues: ["Image URL is required"],
+      recommendation: "rejected",
     }
   }
 
-  static async batchVerifyMedicines(inputs: VerifyMedicineInput[]): Promise<MedicineVerificationResult[]> {
-    return Promise.all(inputs.map((input) => this.verifyMedicine(input)))
+  if (input.expiryDate) {
+    const expiry = new Date(input.expiryDate)
+    const sixMonthsFromNow = new Date()
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
+
+    if (expiry < sixMonthsFromNow) {
+      issues.push("Medicine expires in less than 6 months")
+      confidence -= 0.5
+    }
+  }
+
+  const isValid = issues.length === 0 && confidence >= 0.7
+  const recommendation = isValid ? "approved" : confidence >= 0.5 ? "manual_review" : "rejected"
+
+  return {
+    isValid,
+    confidence,
+    issues,
+    recommendation,
+    details: {
+      medicineName: input.medicineName,
+      batchNumber: input.batchNumber,
+      expiryDate: input.expiryDate,
+    },
   }
 }
 
-export async function verifyMedicine(input: VerifyMedicineInput) {
-  return MedicineVerificationService.verifyMedicine(input)
+export class MedicineVerificationService {
+  static async verifyMedicine(imageUrl: string): Promise<VerificationResult> {
+    return verifyMedicine({ imageUrl })
+  }
+
+  static async verifyWithDetails(input: MedicineInput): Promise<VerificationResult> {
+    return verifyMedicine(input)
+  }
 }

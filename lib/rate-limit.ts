@@ -2,52 +2,40 @@
  * Project: Vitamend
  * Creator: Rachit Kumar Tiwari
  */
-import { type NextRequest, NextResponse } from "next/server"
 
-type Bucket = { tokens: number; updatedAt: number }
-const buckets = new Map<string, Bucket>()
-
-function keyFromReq(req: NextRequest) {
-  const xf = req.headers.get("x-forwarded-for") || ""
-  const ip = xf.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "anon"
-  return ip
+interface RateLimitResult {
+  allowed: boolean
+  remaining: number
+  reset: number
 }
 
-export function checkRateLimit(req: NextRequest, maxRequests = 60, windowMs = 60000) {
-  const key = keyFromReq(req)
+const store = new Map<string, { count: number; resetAt: number }>()
+
+export function checkRateLimit(req: Request, capacity = 100, refillRate = 10): RateLimitResult {
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown"
   const now = Date.now()
-  const capacity = maxRequests
-  const refillPerMs = capacity / windowMs
+  const key = `rate-limit:${ip}`
 
-  let b = buckets.get(key)
-  if (!b) {
-    b = { tokens: capacity, updatedAt: now }
-    buckets.set(key, b)
+  let bucket = store.get(key)
+
+  if (!bucket || now >= bucket.resetAt) {
+    bucket = { count: capacity, resetAt: now + 60000 }
+    store.set(key, bucket)
   }
 
-  const elapsed = now - b.updatedAt
-  b.tokens = Math.min(capacity, b.tokens + elapsed * refillPerMs)
-  b.updatedAt = now
+  const timePassed = now - (bucket.resetAt - 60000)
+  const tokensToAdd = Math.floor(timePassed / 1000) * refillRate
+  bucket.count = Math.min(capacity, bucket.count + tokensToAdd)
 
-  if (b.tokens < 1) {
-    return { allowed: false }
+  if (bucket.count > 0) {
+    bucket.count--
+    store.set(key, bucket)
+    return { allowed: true, remaining: bucket.count, reset: bucket.resetAt }
   }
 
-  b.tokens -= 1
-  return { allowed: true }
+  return { allowed: false, remaining: 0, reset: bucket.resetAt }
 }
 
-interface RateLimitConfig {
-  windowMs: number
-  maxRequests: number
-}
-
-export function rateLimit(config: RateLimitConfig) {
-  return async (req: NextRequest) => {
-    const result = checkRateLimit(req, config.maxRequests, config.windowMs)
-    if (!result.allowed) {
-      return NextResponse.json({ success: false, error: "Too many requests" }, { status: 429 })
-    }
-    return null
-  }
+export function rateLimit(capacity = 100, refillRate = 10) {
+  return (req: Request) => checkRateLimit(req, capacity, refillRate)
 }

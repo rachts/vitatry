@@ -4,24 +4,14 @@ export interface IUser extends Document {
   name: string
   email: string
   password?: string
-  role: "donor" | "volunteer" | "admin" | "reviewer" | "ngo_partner"
+  image?: string
+  role: "donor" | "volunteer" | "admin" | "reviewer" | "ngo_partner" | "user"
+  isActive: boolean
   credits: number
-  profile: {
+  profile?: {
     phone?: string
     address?: string
-    preferences?: string[]
-    organization?: string
     verificationLevel?: "basic" | "verified" | "trusted"
-    specializations?: string[]
-    pushNotifications?: boolean
-    showInLeaderboard?: boolean
-    avatar?: string
-    bio?: string
-    socialLinks?: {
-      website?: string
-      linkedin?: string
-      twitter?: string
-    }
   }
   permissions: string[]
   achievements: Array<{
@@ -55,31 +45,21 @@ const UserSchema = new mongoose.Schema<IUser>(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String },
+    image: { type: String },
     role: {
       type: String,
-      enum: ["donor", "volunteer", "admin", "reviewer", "ngo_partner"],
-      default: "donor",
+      enum: ["donor", "volunteer", "admin", "reviewer", "ngo_partner", "user"],
+      default: "user",
     },
+    isActive: { type: Boolean, default: true },
     credits: { type: Number, default: 0 },
     profile: {
       phone: String,
       address: String,
-      preferences: [String],
-      organization: String,
       verificationLevel: {
         type: String,
         enum: ["basic", "verified", "trusted"],
         default: "basic",
-      },
-      specializations: [String],
-      pushNotifications: { type: Boolean, default: true },
-      showInLeaderboard: { type: Boolean, default: true },
-      avatar: String,
-      bio: String,
-      socialLinks: {
-        website: String,
-        linkedin: String,
-        twitter: String,
       },
     },
     permissions: {
@@ -94,6 +74,8 @@ const UserSchema = new mongoose.Schema<IUser>(
             return ["read:donations", "request:medicines", "read:analytics"]
           case "volunteer":
             return ["read:donations", "update:volunteer_tasks"]
+          case "user":
+            return ["read:own", "write:own"]
           default:
             return ["read:own", "write:own"]
         }

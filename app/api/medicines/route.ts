@@ -9,22 +9,16 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import dbConnect from "@/lib/dbConnect"
 import Product from "@/models/Product"
 import { z } from "zod"
-import { requireUser } from "@/lib/guards"
 
-const donationSchema = z.object({
-  name: z.string().min(2),
-  description: z.string().min(10),
-  image: z.string().url(),
-  expiryDate: z.coerce.date(),
-  manufacturer: z.string().min(2),
-  category: z.string().min(2),
-  price: z.coerce.number().min(10).max(200),
-  inStock: z.coerce.number().int().min(0).default(0),
+export const dynamic = "force-dynamic"
+
+const medicineSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1),
+  expiryDate: z.string(),
+  quantity: z.number().min(1),
+  imageUrl: z.string().optional(),
 })
-
-function priceInr(price: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(price)
-}
 
 export async function OPTIONS(req: NextRequest) {
   return preflight(req)
@@ -33,18 +27,18 @@ export async function OPTIONS(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const rl = checkRateLimit(req)
   if (!rl.allowed) return withCors(req, api.badRequest("Too many requests"))
+
   try {
     await dbConnect()
-    const now = new Date()
-    const items = await Product.find({
+    const today = new Date()
+    const medicines = await Product.find({
       verified: true,
-      inStock: { $gt: 0 },
-      expiryDate: { $gt: now },
+      expiryDate: { $gt: today },
     })
       .sort({ createdAt: -1 })
       .lean()
-    const data = items.map((p: any) => ({ ...p, priceInr: priceInr(p.price) }))
-    return withCors(req, api.ok(data))
+
+    return withCors(req, api.ok(medicines))
   } catch {
     return withCors(req, api.error("Failed to fetch medicines"))
   }
@@ -53,26 +47,39 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const rl = checkRateLimit(req)
   if (!rl.allowed) return withCors(req, api.badRequest("Too many requests"))
+
   try {
     await dbConnect()
   } catch {
     return withCors(req, api.error("Database connection failed"))
   }
+
   try {
-    const user = await requireUser()
-    const json = await req.json()
-    const parsed = donationSchema.safeParse(json)
-    if (!parsed.success) return withCors(req, api.badRequest("Invalid donation payload"))
-    if (parsed.data.expiryDate <= new Date()) return withCors(req, api.badRequest("Expiry date must be in the future"))
-    const created = await Product.create({
-      ...parsed.data,
+    const body = await req.json()
+    const parsed = medicineSchema.safeParse(body)
+    if (!parsed.success) return withCors(req, api.badRequest("Invalid medicine data"))
+
+    const expiry = new Date(parsed.data.expiryDate)
+    const sixMonthsFromNow = new Date()
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
+
+    if (expiry < sixMonthsFromNow) {
+      return withCors(req, api.badRequest("Medicine must have at least 6 months before expiry"))
+    }
+
+    const medicine = await Product.create({
+      name: parsed.data.name,
+      description: parsed.data.description,
+      price: 0,
+      inStock: parsed.data.quantity,
+      category: "donation",
+      imageUrl: parsed.data.imageUrl,
+      expiryDate: expiry,
       verified: false,
-      donatedBy: user?.user?.id,
-      inStock: parsed.data.inStock ?? 0,
     })
-    const data = { ...created.toObject(), priceInr: priceInr(created.price) }
-    return withCors(req, api.created(data))
+
+    return withCors(req, api.created({ id: medicine._id, status: "pending" }))
   } catch {
-    return withCors(req, api.error("Failed to submit donation"))
+    return withCors(req, api.error("Failed to create medicine donation"))
   }
 }
