@@ -29,144 +29,129 @@ export interface IDonation extends Document {
   updatedAt: Date
 }
 
-const DonationSchema = new Schema<IDonation>({
-  donationId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
-  },
-  medicineName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  brand: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  genericName: {
-    type: String,
-    trim: true,
-  },
-  dosage: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1,
-  },
-  expiryDate: {
-    type: Date,
-    required: true,
-    validate: {
-      validator: (date: Date) => {
-        const sixMonthsFromNow = new Date()
-        sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
-        return date > sixMonthsFromNow
-      },
-      message: "Medicine must have at least 6 months before expiry",
-    },
-  },
-  condition: {
-    type: String,
-    required: true,
-    enum: ["new", "opened_unused", "partially_used"],
-  },
-  category: {
-    type: String,
-    required: true,
-    enum: ["pain_relief", "antibiotics", "vitamins", "chronic_disease", "other"],
-  },
-  donorName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  donorEmail: {
-    type: String,
-    required: true,
-    trim: true,
-    lowercase: true,
-  },
-  donorPhone: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  donorAddress: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  notes: {
-    type: String,
-    trim: true,
-  },
-  images: [
-    {
+const DonationSchema = new Schema<IDonation>(
+  {
+    donationId: {
       type: String,
+      required: true,
+      unique: true,
     },
-  ],
-  status: {
-    type: String,
-    required: true,
-    enum: ["pending", "verified", "rejected", "distributed"],
-    default: "pending",
-    index: true,
+    medicineName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    brand: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    genericName: {
+      type: String,
+      trim: true,
+    },
+    dosage: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    expiryDate: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: (date: Date) => {
+          const sixMonthsFromNow = new Date()
+          sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
+          return date > sixMonthsFromNow
+        },
+        message: "Medicine must have at least 6 months before expiry",
+      },
+    },
+    condition: {
+      type: String,
+      required: true,
+      enum: ["new", "opened_unused", "partially_used"],
+    },
+    category: {
+      type: String,
+      required: true,
+      enum: ["pain_relief", "antibiotics", "vitamins", "chronic_disease", "other"],
+    },
+    donorName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    donorEmail: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
+    donorPhone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    donorAddress: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
+    images: [
+      {
+        type: String,
+      },
+    ],
+    status: {
+      type: String,
+      required: true,
+      enum: ["pending", "verified", "rejected", "distributed"],
+      default: "pending",
+    },
+    verificationNotes: {
+      type: String,
+      trim: true,
+    },
+    verifiedBy: {
+      type: String,
+      trim: true,
+    },
+    verifiedAt: {
+      type: Date,
+    },
+    distributedTo: {
+      type: String,
+      trim: true,
+    },
+    distributedAt: {
+      type: Date,
+    },
+    isReserved: {
+      type: Boolean,
+      default: false,
+    },
+    reservedBy: {
+      type: String,
+      trim: true,
+    },
+    reservedAt: {
+      type: Date,
+    },
   },
-  verificationNotes: {
-    type: String,
-    trim: true,
-  },
-  verifiedBy: {
-    type: String,
-    trim: true,
-  },
-  verifiedAt: {
-    type: Date,
-  },
-  distributedTo: {
-    type: String,
-    trim: true,
-  },
-  distributedAt: {
-    type: Date,
-  },
-  isReserved: {
-    type: Boolean,
-    default: false,
-    index: true,
-  },
-  reservedBy: {
-    type: String,
-    trim: true,
-  },
-  reservedAt: {
-    type: Date,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    index: true,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
-})
+  { timestamps: true },
+)
 
-// Update the updatedAt field before saving
-DonationSchema.pre("save", function (next) {
-  this.updatedAt = new Date()
-  next()
-})
-
-// Create indexes for better query performance
+DonationSchema.index({ donationId: 1 })
 DonationSchema.index({ status: 1, isReserved: 1 })
 DonationSchema.index({ category: 1, status: 1 })
 DonationSchema.index({ donorEmail: 1 })

@@ -1,7 +1,3 @@
-/**
- * Project: Vitamend
- * Creator: Rachit Kumar Tiwari
- */
 import mongoose, { Schema, type Document } from "mongoose"
 
 export interface IProduct extends Document {
@@ -22,7 +18,7 @@ const ProductSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true },
     description: { type: String, required: true },
-    price: { type: Number, required: true, min: 10, max: 200 },
+    price: { type: Number, required: true, min: 1, max: 500 },
     inStock: { type: Number, required: true, default: 0 },
     category: { type: String, required: true },
     imageUrl: { type: String },

@@ -1,7 +1,3 @@
-/**
- * Project: Vitamend
- * Creator: Rachit Kumar Tiwari
- */
 import mongoose, { Schema, type Document } from "mongoose"
 
 export interface IVolunteerApplication extends Document {
