@@ -34,8 +34,8 @@ export default function CheckoutPage() {
     nameOnCard: "",
   })
 
-  const safeItems = Array.isArray(items) ? items : []
-  const safeTotalPrice = typeof totalPrice === "number" ? totalPrice : 0
+  const safeItems = items ?? []
+  const safeTotalPrice = totalPrice ?? 0
   const itemCount = safeItems.length
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

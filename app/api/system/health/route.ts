@@ -13,14 +13,17 @@ export async function GET() {
 
     let dbStats = null
     try {
-      const collections = await mongoose.connection.db?.listCollections().toArray()
-      const collectionNames = collections?.map((c) => c.name) || []
+      if (mongoose.connection.db) {
+        const collections = await mongoose.connection.db.listCollections().toArray()
 
-      if (collectionNames.length > 0) {
-        dbStats = await mongoose.connection.db?.command({ collStats: collectionNames[0] })
+        if (collections && collections.length > 0) {
+          const firstCollection = collections[0].name
+          dbStats = await mongoose.connection.db.command({ collStats: firstCollection })
+        }
       }
     } catch (statsError) {
       console.error("Error getting DB stats:", statsError)
+      dbStats = { error: "Unable to fetch collection stats" }
     }
 
     return NextResponse.json({
@@ -29,10 +32,12 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       database: {
         status: dbStatus,
-        name: mongoose.connection.name,
-        host: mongoose.connection.host,
-        collections: dbStats ? 1 : 0,
+        name: mongoose.connection.name || "unknown",
+        host: mongoose.connection.host || "unknown",
+        stats: dbStats,
       },
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
       environment: process.env.NODE_ENV || "development",
     })
   } catch (error) {
@@ -42,6 +47,7 @@ export async function GET() {
         success: false,
         status: "unhealthy",
         error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
       },
       { status: 503 },
     )

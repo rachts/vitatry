@@ -107,7 +107,6 @@ const UserSchema = new mongoose.Schema<IUser>(
   { timestamps: true },
 )
 
-UserSchema.index({ email: 1 })
 UserSchema.index({ role: 1 })
 
 UserSchema.virtual("isLocked").get(function () {

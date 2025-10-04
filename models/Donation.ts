@@ -151,7 +151,6 @@ const DonationSchema = new Schema<IDonation>(
   { timestamps: true },
 )
 
-DonationSchema.index({ donationId: 1 })
 DonationSchema.index({ status: 1, isReserved: 1 })
 DonationSchema.index({ category: 1, status: 1 })
 DonationSchema.index({ donorEmail: 1 })
