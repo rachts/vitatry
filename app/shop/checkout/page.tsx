@@ -1,5 +1,4 @@
 "use client"
-export const dynamic = "force-dynamic"
 
 import type React from "react"
 import { useState } from "react"
@@ -17,7 +16,7 @@ import Link from "next/link"
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items = [], totalPrice = 0, clearCart } = useCart()
+  const { items, totalPrice, clearCart } = useCart()
   const [loading, setLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("card")
   const [formData, setFormData] = useState({
@@ -35,20 +34,23 @@ export default function CheckoutPage() {
     nameOnCard: "",
   })
 
+  const safeItems = Array.isArray(items) ? items : []
+  const safeTotalPrice = typeof totalPrice === "number" ? totalPrice : 0
+  const itemCount = safeItems.length
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }))
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (itemCount === 0) return
+
     setLoading(true)
 
     try {
       const orderData = {
-        items: (items || []).map((item) => ({
+        items: safeItems.map((item) => ({
           productId: item?.productId || "",
           quantity: item?.quantity || 1,
           price: item?.price || 0,
@@ -63,20 +65,18 @@ export default function CheckoutPage() {
           phone: formData.phone,
         },
         paymentMethod,
-        totalAmount: totalPrice * 1.08,
+        totalAmount: safeTotalPrice * 1.08,
       }
 
       const response = await fetch("/api/shop/orders", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
       })
 
       if (response.ok) {
         const result = await response.json()
-        await clearCart()
+        if (clearCart) await clearCart()
         router.push(`/shop/order-confirmation?orderId=${result.orderId}`)
       } else {
         throw new Error("Failed to place order")
@@ -89,9 +89,7 @@ export default function CheckoutPage() {
     }
   }
 
-  const itemCount = items?.length || 0
-
-  if (!Array.isArray(items) || itemCount === 0) {
+  if (itemCount === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-12">
@@ -291,8 +289,8 @@ export default function CheckoutPage() {
                   <CardTitle>Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {(items || []).map((item, idx) => (
-                    <div key={item?.productId || idx} className="flex justify-between items-center">
+                  {safeItems.map((item, idx) => (
+                    <div key={item?.productId || `item-${idx}`} className="flex justify-between items-center">
                       <div>
                         <p className="font-medium">{item?.name || "Product"}</p>
                         <p className="text-sm text-gray-600">Qty: {item?.quantity || 1}</p>
@@ -305,7 +303,7 @@ export default function CheckoutPage() {
 
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>₹{totalPrice.toFixed(2)}</span>
+                    <span>₹{safeTotalPrice.toFixed(2)}</span>
                   </div>
 
                   <div className="flex justify-between">
@@ -315,14 +313,14 @@ export default function CheckoutPage() {
 
                   <div className="flex justify-between">
                     <span>Tax</span>
-                    <span>₹{(totalPrice * 0.08).toFixed(2)}</span>
+                    <span>₹{(safeTotalPrice * 0.08).toFixed(2)}</span>
                   </div>
 
                   <Separator />
 
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span>₹{(totalPrice * 1.08).toFixed(2)}</span>
+                    <span>₹{(safeTotalPrice * 1.08).toFixed(2)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -342,7 +340,7 @@ export default function CheckoutPage() {
                   </div>
 
                   <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? "Processing..." : `Place Order - ₹${(totalPrice * 1.08).toFixed(2)}`}
+                    {loading ? "Processing..." : `Place Order - ₹${(safeTotalPrice * 1.08).toFixed(2)}`}
                   </Button>
 
                   <Button asChild variant="outline" className="w-full mt-2 bg-transparent">

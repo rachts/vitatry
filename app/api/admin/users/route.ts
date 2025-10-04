@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
@@ -14,8 +15,8 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const page = Number.parseInt(searchParams.get("page") || "1", 10)
+    const limit = Number.parseInt(searchParams.get("limit") || "10", 10)
     const role = searchParams.get("role")
     const search = searchParams.get("search")
     const sortBy = searchParams.get("sortBy") || "createdAt"
@@ -24,9 +25,7 @@ export async function GET(req: NextRequest) {
     await dbConnect()
 
     const query: any = {}
-    if (role) {
-      query.role = role
-    }
+    if (role) query.role = role
     if (search) {
       query.$or = [{ name: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }]
     }
@@ -39,6 +38,7 @@ export async function GET(req: NextRequest) {
       .limit(limit)
 
     return NextResponse.json({
+      success: true,
       users,
       pagination: {
         page,
@@ -49,6 +49,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error("Error fetching users:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }

@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id || !["admin", "reviewer"].includes(session.user.role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -46,45 +47,23 @@ export async function GET(req: NextRequest) {
       Donation.countDocuments({ createdAt: { $gte: startDate } }),
     ])
 
-    const donationsByStatus = await Donation.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-        },
-      },
-    ])
+    const donationsByStatus = await Donation.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }])
 
     const monthlyTrends = await Donation.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate },
-        },
-      },
+      { $match: { createdAt: { $gte: startDate } } },
       {
         $group: {
-          _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
-          },
+          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
           donations: { $sum: 1 },
           medicines: { $sum: { $size: "$medicines" } },
         },
       },
-      {
-        $sort: { "_id.year": 1, "_id.month": 1 },
-      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
     ])
 
     const topMedicines = await Donation.aggregate([
       { $unwind: "$medicines" },
-      {
-        $group: {
-          _id: "$medicines.name",
-          count: { $sum: "$medicines.quantity" },
-          donations: { $sum: 1 },
-        },
-      },
+      { $group: { _id: "$medicines.name", count: { $sum: "$medicines.quantity" }, donations: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 },
     ])
@@ -101,9 +80,9 @@ export async function GET(req: NextRequest) {
     ])
 
     const impactMetrics = {
-      livesHelped: Math.floor(totalMedicines[0]?.totalQuantity * 0.3) || 0,
-      co2Saved: Math.floor(totalMedicines[0]?.totalQuantity * 0.05) || 0,
-      wasteReduced: Math.floor(totalMedicines[0]?.totalQuantity * 0.1) || 0,
+      livesHelped: Math.floor((totalMedicines[0]?.totalQuantity || 0) * 0.3),
+      co2Saved: Math.floor((totalMedicines[0]?.totalQuantity || 0) * 0.05),
+      wasteReduced: Math.floor((totalMedicines[0]?.totalQuantity || 0) * 0.1),
       uniqueMedicines: totalMedicines[0]?.uniqueMedicines?.length || 0,
     }
 
@@ -116,6 +95,7 @@ export async function GET(req: NextRequest) {
       previousPeriodDonations > 0 ? ((recentDonations - previousPeriodDonations) / previousPeriodDonations) * 100 : 0
 
     return NextResponse.json({
+      success: true,
       overview: {
         totalDonations,
         totalUsers,
@@ -134,6 +114,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error("Error fetching analytics:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }

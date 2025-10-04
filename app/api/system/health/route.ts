@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 import { NextResponse } from "next/server"
 import mongoose from "mongoose"
@@ -12,40 +13,35 @@ export async function GET() {
 
     let dbStats = null
     try {
-      if (mongoose.connection.db) {
-        await mongoose.connection.db.command({ ping: 1 })
-        const collections = await mongoose.connection.db.listCollections().toArray()
-        dbStats = {
-          status: "healthy",
-          collections: collections.length,
-          database: mongoose.connection.db.databaseName,
-        }
+      const collections = await mongoose.connection.db?.listCollections().toArray()
+      const collectionNames = collections?.map((c) => c.name) || []
+
+      if (collectionNames.length > 0) {
+        dbStats = await mongoose.connection.db?.command({ collStats: collectionNames[0] })
       }
-    } catch (error) {
-      console.error("Error getting database stats:", error)
-      dbStats = {
-        status: "error",
-        error: error instanceof Error ? error.message : "Unknown error",
-      }
+    } catch (statsError) {
+      console.error("Error getting DB stats:", statsError)
     }
 
     return NextResponse.json({
+      success: true,
       status: "healthy",
       timestamp: new Date().toISOString(),
       database: {
         status: dbStatus,
-        stats: dbStats,
+        name: mongoose.connection.name,
+        host: mongoose.connection.host,
+        collections: dbStats ? 1 : 0,
       },
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
+      environment: process.env.NODE_ENV || "development",
     })
   } catch (error) {
-    console.error("Health check failed:", error)
+    console.error("Health check error:", error)
     return NextResponse.json(
       {
+        success: false,
         status: "unhealthy",
         error: error instanceof Error ? error.message : "Unknown error",
-        timestamp: new Date().toISOString(),
       },
       { status: 503 },
     )

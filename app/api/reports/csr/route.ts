@@ -1,20 +1,20 @@
 export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { handleApiError } from "@/lib/api-error"
 import { ReportGenerator } from "@/lib/report-generator"
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
     if (!["admin", "ngo_partner"].includes(session.user.role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 })
     }
 
     const { searchParams } = new URL(req.url)
@@ -23,14 +23,13 @@ export async function GET(req: NextRequest) {
 
     const report = await ReportGenerator.generateCSRReport(organizationId)
 
-    if (format === "pdf") {
-      return new NextResponse("PDF generation not implemented yet", { status: 501 })
-    } else if (format === "excel") {
-      return new NextResponse("Excel generation not implemented yet", { status: 501 })
+    if (format === "pdf" || format === "excel") {
+      return new NextResponse(`${format.toUpperCase()} generation not implemented yet`, { status: 501 })
     }
 
-    return NextResponse.json(report)
+    return NextResponse.json({ success: true, report })
   } catch (error) {
-    return handleApiError(error)
+    console.error("Error generating CSR report:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }

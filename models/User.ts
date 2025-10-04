@@ -74,8 +74,6 @@ const UserSchema = new mongoose.Schema<IUser>(
             return ["read:donations", "request:medicines", "read:analytics"]
           case "volunteer":
             return ["read:donations", "update:volunteer_tasks"]
-          case "user":
-            return ["read:own", "write:own"]
           default:
             return ["read:own", "write:own"]
         }
@@ -106,55 +104,40 @@ const UserSchema = new mongoose.Schema<IUser>(
     passwordResetToken: String,
     passwordResetExpires: Date,
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 )
 
-// Indexes for performance
 UserSchema.index({ email: 1 })
 UserSchema.index({ role: 1 })
-UserSchema.index({ "profile.verificationLevel": 1 })
 
-// Account lockout logic
 UserSchema.virtual("isLocked").get(function () {
   return !!(this.lockUntil && this.lockUntil > Date.now())
 })
 
 UserSchema.methods.incLoginAttempts = function () {
   if (this.lockUntil && this.lockUntil < Date.now()) {
-    return this.updateOne({
-      $unset: { lockUntil: 1 },
-      $set: { loginAttempts: 1 },
-    })
+    return this.updateOne({ $unset: { lockUntil: 1 }, $set: { loginAttempts: 1 } })
   }
 
   const updates: any = { $inc: { loginAttempts: 1 } }
-
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 } // 2 hours
+    updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 }
   }
 
   return this.updateOne(updates)
 }
 
-// Permission checking methods
 UserSchema.methods.hasPermission = function (permission: string): boolean {
   return this.permissions.includes(permission) || this.permissions.includes("write:all")
 }
 
 UserSchema.methods.canAccess = function (resource: string, action: string): boolean {
-  const permission = `${action}:${resource}`
-  return this.hasPermission(permission)
+  return this.hasPermission(`${action}:${resource}`)
 }
 
-// Achievement methods
 UserSchema.methods.addAchievement = function (achievement: any) {
   if (!this.achievements.find((a: any) => a.id === achievement.id)) {
-    this.achievements.push({
-      ...achievement,
-      unlockedAt: new Date(),
-    })
+    this.achievements.push({ ...achievement, unlockedAt: new Date() })
     this.credits += achievement.points || 0
     return this.save()
   }
