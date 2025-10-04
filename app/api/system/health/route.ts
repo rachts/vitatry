@@ -1,35 +1,53 @@
+export const dynamic = "force-dynamic"
+
 import { NextResponse } from "next/server"
-import { checkDatabaseHealth, getDatabaseStats } from "@/lib/database/collections"
+import mongoose from "mongoose"
+import dbConnect from "@/lib/dbConnect"
 
 export async function GET() {
   try {
-    const dbHealth = await checkDatabaseHealth()
-    const dbStats = await getDatabaseStats()
+    await dbConnect()
 
-    const health = {
-      status: dbHealth.status === "healthy" ? "ok" : "error",
-      timestamp: new Date().toISOString(),
-      services: {
-        database: dbHealth,
-        environment: {
-          nodeEnv: process.env.NODE_ENV,
-          mongoUri: process.env.MONGODB_URI ? "configured" : "missing",
-          nextAuthSecret: process.env.NEXTAUTH_SECRET ? "configured" : "missing",
-          blobToken: process.env.BLOB_READ_WRITE_TOKEN ? "configured" : "missing",
-        },
-      },
-      statistics: dbStats,
+    const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+
+    let dbStats = null
+    try {
+      if (mongoose.connection.db) {
+        await mongoose.connection.db.command({ ping: 1 })
+        const collections = await mongoose.connection.db.listCollections().toArray()
+        dbStats = {
+          status: "healthy",
+          collections: collections.length,
+          database: mongoose.connection.db.databaseName,
+        }
+      }
+    } catch (error) {
+      console.error("Error getting database stats:", error)
+      dbStats = {
+        status: "error",
+        error: error instanceof Error ? error.message : "Unknown error",
+      }
     }
 
-    return NextResponse.json(health)
+    return NextResponse.json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      database: {
+        status: dbStatus,
+        stats: dbStats,
+      },
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+    })
   } catch (error) {
+    console.error("Health check failed:", error)
     return NextResponse.json(
       {
-        status: "error",
+        status: "unhealthy",
+        error: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString(),
-        error: error.message,
       },
-      { status: 500 },
+      { status: 503 },
     )
   }
 }

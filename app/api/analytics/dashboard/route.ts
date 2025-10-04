@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
 
     await dbConnect()
 
-    // Calculate date range
     const now = new Date()
     let startDate: Date
     switch (timeframe) {
@@ -40,7 +39,6 @@ export async function GET(req: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     }
 
-    // Get basic stats
     const [totalDonations, totalUsers, totalVolunteers, recentDonations] = await Promise.all([
       Donation.countDocuments(),
       User.countDocuments(),
@@ -48,7 +46,6 @@ export async function GET(req: NextRequest) {
       Donation.countDocuments({ createdAt: { $gte: startDate } }),
     ])
 
-    // Get donation status breakdown
     const donationsByStatus = await Donation.aggregate([
       {
         $group: {
@@ -58,7 +55,6 @@ export async function GET(req: NextRequest) {
       },
     ])
 
-    // Get monthly trends
     const monthlyTrends = await Donation.aggregate([
       {
         $match: {
@@ -80,7 +76,6 @@ export async function GET(req: NextRequest) {
       },
     ])
 
-    // Get top medicines
     const topMedicines = await Donation.aggregate([
       { $unwind: "$medicines" },
       {
@@ -94,7 +89,6 @@ export async function GET(req: NextRequest) {
       { $limit: 10 },
     ])
 
-    // Calculate impact metrics
     const totalMedicines = await Donation.aggregate([
       { $unwind: "$medicines" },
       {
@@ -107,13 +101,12 @@ export async function GET(req: NextRequest) {
     ])
 
     const impactMetrics = {
-      livesHelped: Math.floor(totalMedicines[0]?.totalQuantity * 0.3) || 0, // Estimate
-      co2Saved: Math.floor(totalMedicines[0]?.totalQuantity * 0.05) || 0, // kg CO2
-      wasteReduced: Math.floor(totalMedicines[0]?.totalQuantity * 0.1) || 0, // kg waste
+      livesHelped: Math.floor(totalMedicines[0]?.totalQuantity * 0.3) || 0,
+      co2Saved: Math.floor(totalMedicines[0]?.totalQuantity * 0.05) || 0,
+      wasteReduced: Math.floor(totalMedicines[0]?.totalQuantity * 0.1) || 0,
       uniqueMedicines: totalMedicines[0]?.uniqueMedicines?.length || 0,
     }
 
-    // Calculate growth rates
     const previousPeriodStart = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()))
     const previousPeriodDonations = await Donation.countDocuments({
       createdAt: { $gte: previousPeriodStart, $lt: startDate },

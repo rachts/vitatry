@@ -48,10 +48,10 @@ export default function CheckoutPage() {
 
     try {
       const orderData = {
-        items: items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.price,
+        items: (items || []).map((item) => ({
+          productId: item?.productId || "",
+          quantity: item?.quantity || 1,
+          price: item?.price || 0,
         })),
         shippingAddress: {
           firstName: formData.firstName,
@@ -89,8 +89,9 @@ export default function CheckoutPage() {
     }
   }
 
-  // Null check for empty cart
-  if (!Array.isArray(items) || items.length === 0) {
+  const itemCount = items?.length || 0
+
+  if (!Array.isArray(items) || itemCount === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-12">
@@ -290,13 +291,13 @@ export default function CheckoutPage() {
                   <CardTitle>Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {items.map((item) => (
-                    <div key={item.productId} className="flex justify-between items-center">
+                  {(items || []).map((item, idx) => (
+                    <div key={item?.productId || idx} className="flex justify-between items-center">
                       <div>
-                        <p className="font-medium">{item.name || "Product"}</p>
-                        <p className="text-sm text-gray-600">Qty: {item.quantity || 1}</p>
+                        <p className="font-medium">{item?.name || "Product"}</p>
+                        <p className="text-sm text-gray-600">Qty: {item?.quantity || 1}</p>
                       </div>
-                      <p className="font-medium">₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</p>
+                      <p className="font-medium">₹{((item?.price || 0) * (item?.quantity || 1)).toFixed(2)}</p>
                     </div>
                   ))}
 

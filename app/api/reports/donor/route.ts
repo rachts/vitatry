@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
     const report = await ReportGenerator.generateDonorReport(session.user.id, fromDate, toDate)
 
     if (format === "pdf") {
-      // Generate PDF (you'd implement PDF generation here)
       return new NextResponse("PDF generation not implemented yet", { status: 501 })
     }
 

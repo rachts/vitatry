@@ -23,7 +23,6 @@ export async function GET(req: NextRequest) {
 
     await dbConnect()
 
-    // Build query
     const query: any = {}
     if (role) {
       query.role = role
@@ -32,10 +31,7 @@ export async function GET(req: NextRequest) {
       query.$or = [{ name: { $regex: search, $options: "i" } }, { email: { $regex: search, $options: "i" } }]
     }
 
-    // Get total count
     const total = await User.countDocuments(query)
-
-    // Get users with pagination
     const users = await User.find(query)
       .select("-password")
       .sort({ [sortBy]: sortOrder === "desc" ? -1 : 1 })

@@ -23,10 +23,7 @@ export async function GET(req: NextRequest) {
       SustainabilityTracker.getLeaderboard(10),
     ])
 
-    // Check for new achievements
     const newAchievements = await SustainabilityTracker.checkAndAwardAchievements(session.user.id)
-
-    // Get user's existing achievements
     const user = await User.findById(session.user.id)
     const achievements = user?.achievements || []
 

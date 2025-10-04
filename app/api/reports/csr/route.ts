@@ -13,7 +13,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user has permission to access CSR reports
     if (!["admin", "ngo_partner"].includes(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
@@ -25,10 +24,8 @@ export async function GET(req: NextRequest) {
     const report = await ReportGenerator.generateCSRReport(organizationId)
 
     if (format === "pdf") {
-      // Generate PDF (you'd implement PDF generation here)
       return new NextResponse("PDF generation not implemented yet", { status: 501 })
     } else if (format === "excel") {
-      // Generate Excel (you'd implement Excel generation here)
       return new NextResponse("Excel generation not implemented yet", { status: 501 })
     }
 
