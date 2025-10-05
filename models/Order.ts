@@ -1,5 +1,6 @@
-import mongoose, { Schema, type Document } from "mongoose"
+import mongoose, { Schema, Document, Model } from "mongoose"
 
+// 🧾 Order Interface
 export interface IOrder extends Document {
   orderNumber: string
   userId: string
@@ -19,15 +20,16 @@ export interface IOrder extends Document {
     zipCode: string
     phone: string
   }
-  paymentMethod: string
+  paymentMethod: "cod" | "card" | "upi" | string
   createdAt: Date
   updatedAt: Date
 }
 
-const OrderSchema = new Schema<IOrder>(
+// 🏗️ Schema Definition
+const OrderSchema: Schema<IOrder> = new Schema(
   {
     orderNumber: { type: String, required: true, unique: true },
-    userId: { type: String, required: true },
+    userId: { type: String, required: true, index: true },
     items: [
       {
         productId: { type: String, required: true },
@@ -40,6 +42,7 @@ const OrderSchema = new Schema<IOrder>(
       type: String,
       enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
       default: "pending",
+      index: true,
     },
     shippingAddress: {
       firstName: { type: String, required: true },
@@ -50,12 +53,22 @@ const OrderSchema = new Schema<IOrder>(
       zipCode: { type: String, required: true },
       phone: { type: String, required: true },
     },
-    paymentMethod: { type: String, required: true },
+    paymentMethod: {
+      type: String,
+      required: true,
+      enum: ["cod", "card", "upi"],
+      default: "cod",
+    },
   },
-  { timestamps: true },
+  { timestamps: true }
 )
 
+// ✅ Indexes for faster queries
 OrderSchema.index({ userId: 1 })
 OrderSchema.index({ status: 1 })
+OrderSchema.index({ orderNumber: 1 })
 
-export default mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema)
+// ⚡ Hot reload safe export
+const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema)
+
+export default Order
