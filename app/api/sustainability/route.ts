@@ -9,56 +9,62 @@ export async function GET(req: NextRequest) {
   try {
     await dbConnect()
 
-    const [totalDonations, distributedDonations] = await Promise.all([
+    // ✅ Use Promise.all for better performance
+    const [totalDonations, distributedDonations, distributedList] = await Promise.all([
       Donation.countDocuments({}),
       Donation.countDocuments({ status: "distributed" }),
+      Donation.find({ status: "distributed" }).select("quantity").lean(),
     ])
 
-    const donations = await Donation.find({ status: "distributed" }).select("quantity").lean()
+    // ✅ Handle potential missing or invalid quantities safely
+    const totalMedicinesQuantity = distributedList.reduce((sum, d) => sum + (d.quantity || 0), 0)
 
-    const totalMedicinesQuantity = donations.reduce((sum, d) => sum + d.quantity, 0)
+    // ✅ Derived sustainability metrics
+    const wasteReduced = totalMedicinesQuantity * 0.05 // kg
+    const co2Saved = totalMedicinesQuantity * 0.02 // kg
+    const waterSaved = totalMedicinesQuantity * 0.5 // liters
+    const livesImpacted = distributedDonations * 2 // estimated impact factor
 
-    const wasteReduced = totalMedicinesQuantity * 0.05
-    const co2Saved = totalMedicinesQuantity * 0.02
-    const waterSaved = totalMedicinesQuantity * 0.5
-    const livesImpacted = distributedDonations * 2
-
+    // ✅ Clean, descriptive response
     const metrics = {
       wasteReduced: {
         value: wasteReduced.toFixed(2),
         unit: "kg",
-        description: "Medical waste prevented from landfills",
+        description: "Medical waste prevented from reaching landfills",
       },
       co2Saved: {
         value: co2Saved.toFixed(2),
         unit: "kg",
-        description: "CO2 emissions reduced",
+        description: "CO₂ emissions prevented through redistribution",
       },
       waterSaved: {
         value: waterSaved.toFixed(2),
         unit: "liters",
-        description: "Water saved from manufacturing",
+        description: "Water saved from reduced pharmaceutical production",
       },
       medicinesDistributed: {
         value: totalMedicinesQuantity,
         unit: "units",
-        description: "Medicines redistributed to those in need",
+        description: "Medicines successfully redistributed to beneficiaries",
       },
       livesImpacted: {
         value: livesImpacted,
         unit: "people",
-        description: "Lives positively impacted",
+        description: "Estimated number of lives positively impacted",
       },
       totalDonations: {
         value: totalDonations,
         unit: "donations",
-        description: "Total donations received",
+        description: "Total donations received since inception",
       },
     }
 
     return NextResponse.json({ success: true, metrics })
   } catch (error: any) {
     console.error("Error fetching sustainability metrics:", error)
-    return NextResponse.json({ success: false, error: error.message || "Failed to fetch metrics" }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to fetch sustainability metrics" },
+      { status: 500 }
+    )
   }
 }
