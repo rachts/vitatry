@@ -1,5 +1,6 @@
-import mongoose, { type Document, type Model } from "mongoose"
+import mongoose, { Document, Model, Schema } from "mongoose"
 
+// 🧠 User Interface
 export interface IUser extends Document {
   name: string
   email: string
@@ -38,9 +39,17 @@ export interface IUser extends Document {
   passwordResetExpires?: Date
   createdAt: Date
   updatedAt: Date
+
+  // Methods
+  incLoginAttempts: () => Promise<any>
+  hasPermission: (permission: string) => boolean
+  canAccess: (resource: string, action: string) => boolean
+  addAchievement: (achievement: any) => Promise<IUser | void>
+  isLocked: boolean
 }
 
-const UserSchema = new mongoose.Schema<IUser>(
+// 🧩 Schema Definition
+const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
@@ -53,6 +62,7 @@ const UserSchema = new mongoose.Schema<IUser>(
     },
     isActive: { type: Boolean, default: true },
     credits: { type: Number, default: 0 },
+
     profile: {
       phone: String,
       address: String,
@@ -62,23 +72,9 @@ const UserSchema = new mongoose.Schema<IUser>(
         default: "basic",
       },
     },
-    permissions: {
-      type: [String],
-      default: function () {
-        switch (this.role) {
-          case "admin":
-            return ["read:all", "write:all", "delete:all", "manage:users"]
-          case "reviewer":
-            return ["read:donations", "write:donations", "verify:medicines"]
-          case "ngo_partner":
-            return ["read:donations", "request:medicines", "read:analytics"]
-          case "volunteer":
-            return ["read:donations", "update:volunteer_tasks"]
-          default:
-            return ["read:own", "write:own"]
-        }
-      },
-    },
+
+    permissions: { type: [String], default: [] },
+
     achievements: [
       {
         id: String,
@@ -90,15 +86,18 @@ const UserSchema = new mongoose.Schema<IUser>(
         points: { type: Number, default: 0 },
       },
     ],
+
     twoFactor: {
       enabled: { type: Boolean, default: false },
       secret: String,
       backupCodes: [String],
       lastUsedCode: String,
     },
+
     loginAttempts: { type: Number, default: 0 },
     lockUntil: Date,
     lastLogin: Date,
+
     emailVerified: { type: Boolean, default: false },
     emailVerificationToken: String,
     passwordResetToken: String,
@@ -107,41 +106,71 @@ const UserSchema = new mongoose.Schema<IUser>(
   { timestamps: true },
 )
 
+// ⚡ Indexing for faster role-based queries
 UserSchema.index({ role: 1 })
 
-UserSchema.virtual("isLocked").get(function () {
-  return !!(this.lockUntil && this.lockUntil > Date.now())
+// 🔒 Virtuals
+UserSchema.virtual("isLocked").get(function (this: IUser) {
+  return !!(this.lockUntil && this.lockUntil > new Date())
 })
 
-UserSchema.methods.incLoginAttempts = function () {
-  if (this.lockUntil && this.lockUntil < Date.now()) {
+// 🚨 Login Attempts Method
+UserSchema.methods.incLoginAttempts = async function (this: IUser) {
+  if (this.lockUntil && this.lockUntil < new Date()) {
     return this.updateOne({ $unset: { lockUntil: 1 }, $set: { loginAttempts: 1 } })
   }
 
-  const updates: any = { $inc: { loginAttempts: 1 } }
+  const updates: Record<string, any> = { $inc: { loginAttempts: 1 } }
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 }
+    updates.$set = { lockUntil: new Date(Date.now() + 2 * 60 * 60 * 1000) } // 2 hours
   }
 
   return this.updateOne(updates)
 }
 
-UserSchema.methods.hasPermission = function (permission: string): boolean {
+// 🧩 Permission Checks
+UserSchema.methods.hasPermission = function (this: IUser, permission: string): boolean {
   return this.permissions.includes(permission) || this.permissions.includes("write:all")
 }
 
-UserSchema.methods.canAccess = function (resource: string, action: string): boolean {
+UserSchema.methods.canAccess = function (this: IUser, resource: string, action: string): boolean {
   return this.hasPermission(`${action}:${resource}`)
 }
 
-UserSchema.methods.addAchievement = function (achievement: any) {
-  if (!this.achievements.find((a: any) => a.id === achievement.id)) {
+// 🏅 Achievement System
+UserSchema.methods.addAchievement = async function (this: IUser, achievement: any) {
+  if (!this.achievements.find((a) => a.id === achievement.id)) {
     this.achievements.push({ ...achievement, unlockedAt: new Date() })
     this.credits += achievement.points || 0
-    return this.save()
+    await this.save()
+    return this
   }
 }
 
+// ⚙️ Auto-set permissions based on role if not set
+UserSchema.pre<IUser>("save", function (next) {
+  if (!this.permissions || this.permissions.length === 0) {
+    switch (this.role) {
+      case "admin":
+        this.permissions = ["read:all", "write:all", "delete:all", "manage:users"]
+        break
+      case "reviewer":
+        this.permissions = ["read:donations", "write:donations", "verify:medicines"]
+        break
+      case "ngo_partner":
+        this.permissions = ["read:donations", "request:medicines", "read:analytics"]
+        break
+      case "volunteer":
+        this.permissions = ["read:donations", "update:volunteer_tasks"]
+        break
+      default:
+        this.permissions = ["read:own", "write:own"]
+    }
+  }
+  next()
+})
+
+// 🧾 Final Export
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", UserSchema)
 
 export default User
