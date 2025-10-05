@@ -1,19 +1,15 @@
 "use client"
 
-import type React from "react"
-
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { ShoppingCart, CreditCard, MapPin, Phone, Mail, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-
-export const dynamic = "force-dynamic"
 
 interface CartItem {
   _id: string
@@ -26,6 +22,7 @@ interface CartItem {
 export default function CheckoutPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -33,7 +30,7 @@ export default function CheckoutPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    email: session?.user?.email || "",
+    email: "",
     phone: "",
     address: "",
     city: "",
@@ -52,20 +49,21 @@ export default function CheckoutPage() {
       setFormData((prev) => ({ ...prev, email: session.user.email || "" }))
     }
 
-    const savedCart = localStorage.getItem("cart")
-    if (savedCart) {
-      try {
+    try {
+      const savedCart = localStorage.getItem("cart")
+      if (savedCart) {
         const parsed = JSON.parse(savedCart)
-        setCartItems(Array.isArray(parsed) ? parsed : [])
-      } catch {
-        setCartItems([])
+        if (Array.isArray(parsed)) setCartItems(parsed)
       }
+    } catch (err) {
+      console.error("Error loading cart:", err)
+      setCartItems([])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [session, status, router])
 
-  const items = cartItems ?? []
-  const subtotal = items.reduce((sum, item) => sum + (item?.price ?? 0) * (item?.quantity ?? 0), 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price ?? 0) * (item.quantity ?? 0), 0)
   const shipping = subtotal > 0 ? 50 : 0
   const total = subtotal + shipping
 
@@ -75,7 +73,7 @@ export default function CheckoutPage() {
 
     try {
       const orderData = {
-        items: items.map((item) => ({
+        items: cartItems.map((item) => ({
           productId: item._id,
           quantity: item.quantity,
           price: item.price,
@@ -109,7 +107,7 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error("Checkout error:", error)
-      alert("An error occurred during checkout")
+      alert("An error occurred during checkout.")
     } finally {
       setSubmitting(false)
     }
@@ -123,7 +121,7 @@ export default function CheckoutPage() {
     )
   }
 
-  if (items.length === 0) {
+  if (cartItems.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <ShoppingCart className="mx-auto h-16 w-16 text-gray-400 mb-4" />
@@ -151,6 +149,7 @@ export default function CheckoutPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
+        {/* Shipping Info */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
@@ -278,6 +277,7 @@ export default function CheckoutPage() {
           </Card>
         </div>
 
+        {/* Order Summary */}
         <div>
           <Card>
             <CardHeader>
@@ -285,12 +285,12 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                {items.map((item) => (
+                {cartItems.map((item) => (
                   <div key={item._id} className="flex justify-between text-sm">
                     <span>
                       {item.name} × {item.quantity}
                     </span>
-                    <span>₹{((item.price ?? 0) * (item.quantity ?? 0)).toFixed(2)}</span>
+                    <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
