@@ -55,26 +55,24 @@ export async function GET(req: NextRequest) {
         $group: {
           _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
           donations: { $sum: 1 },
-          medicines: { $sum: { $size: "$medicines" } },
+          medicines: { $sum: 1 },
         },
       },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ])
 
     const topMedicines = await Donation.aggregate([
-      { $unwind: "$medicines" },
-      { $group: { _id: "$medicines.name", count: { $sum: "$medicines.quantity" }, donations: { $sum: 1 } } },
+      { $group: { _id: "$medicineName", count: { $sum: "$quantity" }, donations: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 },
     ])
 
     const totalMedicines = await Donation.aggregate([
-      { $unwind: "$medicines" },
       {
         $group: {
           _id: null,
-          totalQuantity: { $sum: "$medicines.quantity" },
-          uniqueMedicines: { $addToSet: "$medicines.name" },
+          totalQuantity: { $sum: "$quantity" },
+          uniqueMedicines: { $addToSet: "$medicineName" },
         },
       },
     ])

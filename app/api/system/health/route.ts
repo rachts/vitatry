@@ -11,19 +11,14 @@ export async function GET() {
 
     const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected"
 
-    let dbStats = null
+    let collectionCount = 0
     try {
       if (mongoose.connection.db) {
         const collections = await mongoose.connection.db.listCollections().toArray()
-
-        if (collections && collections.length > 0) {
-          const firstCollection = collections[0].name
-          dbStats = await mongoose.connection.db.command({ collStats: firstCollection })
-        }
+        collectionCount = collections.length
       }
     } catch (statsError) {
-      console.error("Error getting DB stats:", statsError)
-      dbStats = { error: "Unable to fetch collection stats" }
+      console.error("Error getting collection count:", statsError)
     }
 
     return NextResponse.json({
@@ -34,10 +29,13 @@ export async function GET() {
         status: dbStatus,
         name: mongoose.connection.name || "unknown",
         host: mongoose.connection.host || "unknown",
-        stats: dbStats,
+        collections: collectionCount,
       },
       uptime: process.uptime(),
-      memory: process.memoryUsage(),
+      memory: {
+        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+      },
       environment: process.env.NODE_ENV || "development",
     })
   } catch (error) {

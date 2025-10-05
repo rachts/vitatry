@@ -31,35 +31,12 @@ export interface IDonation extends Document {
 
 const DonationSchema = new Schema<IDonation>(
   {
-    donationId: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    medicineName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    brand: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    genericName: {
-      type: String,
-      trim: true,
-    },
-    dosage: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
+    donationId: { type: String, required: true, unique: true },
+    medicineName: { type: String, required: true, trim: true },
+    brand: { type: String, required: true, trim: true },
+    genericName: { type: String, trim: true },
+    dosage: { type: String, required: true, trim: true },
+    quantity: { type: Number, required: true, min: 1 },
     expiryDate: {
       type: Date,
       required: true,
@@ -72,81 +49,32 @@ const DonationSchema = new Schema<IDonation>(
         message: "Medicine must have at least 6 months before expiry",
       },
     },
-    condition: {
-      type: String,
-      required: true,
-      enum: ["new", "opened_unused", "partially_used"],
-    },
+    condition: { type: String, required: true, enum: ["new", "opened_unused", "partially_used"] },
     category: {
       type: String,
       required: true,
       enum: ["pain_relief", "antibiotics", "vitamins", "chronic_disease", "other"],
     },
-    donorName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    donorEmail: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
-    donorPhone: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    donorAddress: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    notes: {
-      type: String,
-      trim: true,
-    },
-    images: [
-      {
-        type: String,
-      },
-    ],
+    donorName: { type: String, required: true, trim: true },
+    donorEmail: { type: String, required: true, trim: true, lowercase: true },
+    donorPhone: { type: String, required: true, trim: true },
+    donorAddress: { type: String, required: true, trim: true },
+    notes: { type: String, trim: true },
+    images: [{ type: String }],
     status: {
       type: String,
       required: true,
       enum: ["pending", "verified", "rejected", "distributed"],
       default: "pending",
     },
-    verificationNotes: {
-      type: String,
-      trim: true,
-    },
-    verifiedBy: {
-      type: String,
-      trim: true,
-    },
-    verifiedAt: {
-      type: Date,
-    },
-    distributedTo: {
-      type: String,
-      trim: true,
-    },
-    distributedAt: {
-      type: Date,
-    },
-    isReserved: {
-      type: Boolean,
-      default: false,
-    },
-    reservedBy: {
-      type: String,
-      trim: true,
-    },
-    reservedAt: {
-      type: Date,
-    },
+    verificationNotes: { type: String, trim: true },
+    verifiedBy: { type: String, trim: true },
+    verifiedAt: { type: Date },
+    distributedTo: { type: String, trim: true },
+    distributedAt: { type: Date },
+    isReserved: { type: Boolean, default: false },
+    reservedBy: { type: String, trim: true },
+    reservedAt: { type: Date },
   },
   { timestamps: true },
 )
