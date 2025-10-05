@@ -1,6 +1,3 @@
-export const dynamic = "force-dynamic"
-export const revalidate = 0
-
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
@@ -8,110 +5,90 @@ import dbConnect from "@/lib/dbConnect"
 import Donation from "@/models/Donation"
 import User from "@/models/User"
 import VolunteerApplication from "@/models/VolunteerApplication"
+import Product from "@/models/Product"
+
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !["admin", "reviewer"].includes(session.user.role)) {
+
+    if (!session) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
-    const { searchParams } = new URL(req.url)
-    const timeframe = searchParams.get("timeframe") || "30d"
-
     await dbConnect()
 
-    const now = new Date()
-    let startDate: Date
-    switch (timeframe) {
-      case "7d":
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        break
-      case "30d":
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        break
-      case "90d":
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-        break
-      case "1y":
-        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-        break
-      default:
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    }
-
-    const [totalDonations, totalUsers, totalVolunteers, recentDonations] = await Promise.all([
-      Donation.countDocuments(),
-      User.countDocuments(),
-      VolunteerApplication.countDocuments(),
-      Donation.countDocuments({ createdAt: { $gte: startDate } }),
+    const [totalDonations, verifiedDonations, totalUsers, totalVolunteers, totalProducts] = await Promise.all([
+      Donation.countDocuments({}),
+      Donation.countDocuments({ status: "verified" }),
+      User.countDocuments({}),
+      VolunteerApplication.countDocuments({ status: "approved" }),
+      Product.countDocuments({}),
     ])
 
-    const donationsByStatus = await Donation.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }])
+    const recentDonations = await Donation.find({})
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select("medicineName brand quantity status createdAt donorName")
+      .lean()
 
-    const monthlyTrends = await Donation.aggregate([
-      { $match: { createdAt: { $gte: startDate } } },
+    const donationsByCategory = await Donation.aggregate([
       {
         $group: {
-          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
-          donations: { $sum: 1 },
-          medicines: { $sum: 1 },
-        },
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } },
-    ])
-
-    const topMedicines = await Donation.aggregate([
-      { $group: { _id: "$medicineName", count: { $sum: "$quantity" }, donations: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ])
-
-    const totalMedicines = await Donation.aggregate([
-      {
-        $group: {
-          _id: null,
+          _id: "$category",
+          count: { $sum: 1 },
           totalQuantity: { $sum: "$quantity" },
-          uniqueMedicines: { $addToSet: "$medicineName" },
         },
       },
     ])
 
-    const impactMetrics = {
-      livesHelped: Math.floor((totalMedicines[0]?.totalQuantity || 0) * 0.3),
-      co2Saved: Math.floor((totalMedicines[0]?.totalQuantity || 0) * 0.05),
-      wasteReduced: Math.floor((totalMedicines[0]?.totalQuantity || 0) * 0.1),
-      uniqueMedicines: totalMedicines[0]?.uniqueMedicines?.length || 0,
-    }
+    const donationsByStatus = await Donation.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ])
 
-    const previousPeriodStart = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()))
-    const previousPeriodDonations = await Donation.countDocuments({
-      createdAt: { $gte: previousPeriodStart, $lt: startDate },
-    })
-
-    const growthRate =
-      previousPeriodDonations > 0 ? ((recentDonations - previousPeriodDonations) / previousPeriodDonations) * 100 : 0
+    const monthlyDonations = await Donation.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          count: { $sum: 1 },
+          totalQuantity: { $sum: "$quantity" },
+        },
+      },
+      { $sort: { "_id.year": -1, "_id.month": -1 } },
+      { $limit: 12 },
+    ])
 
     return NextResponse.json({
       success: true,
-      overview: {
-        totalDonations,
-        totalUsers,
-        totalVolunteers,
-        recentDonations,
-        growthRate: Math.round(growthRate * 100) / 100,
+      data: {
+        overview: {
+          totalDonations,
+          verifiedDonations,
+          totalUsers,
+          totalVolunteers,
+          totalProducts,
+        },
+        recentDonations: recentDonations.map((d) => ({
+          ...d,
+          _id: d._id.toString(),
+        })),
+        donationsByCategory,
+        donationsByStatus,
+        monthlyDonations,
       },
-      donationsByStatus: donationsByStatus.reduce((acc, item) => {
-        acc[item._id] = item.count
-        return acc
-      }, {}),
-      monthlyTrends,
-      topMedicines,
-      impactMetrics,
-      timeframe,
     })
-  } catch (error) {
-    console.error("Error fetching analytics:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    console.error("Error fetching dashboard analytics:", error)
+    return NextResponse.json({ success: false, error: error.message || "Failed to fetch analytics" }, { status: 500 })
   }
 }

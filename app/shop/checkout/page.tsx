@@ -1,62 +1,86 @@
 "use client"
 
-export const dynamic = "force-dynamic"
-
 import type React from "react"
-import { useState } from "react"
+
+import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useCart } from "@/components/shop/cart-provider"
-import { CreditCard, Truck, Shield, ArrowLeft } from "lucide-react"
+import { ShoppingCart, CreditCard, MapPin, Phone, Mail, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
+export const dynamic = "force-dynamic"
+
+interface CartItem {
+  _id: string
+  name: string
+  price: number
+  quantity: number
+  imageUrl?: string
+}
+
 export default function CheckoutPage() {
+  const { data: session, status } = useSession()
   const router = useRouter()
-  const { items, totalPrice, clearCart } = useCart()
-  const [loading, setLoading] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState("card")
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+
   const [formData, setFormData] = useState({
-    email: "",
     firstName: "",
     lastName: "",
+    email: session?.user?.email || "",
+    phone: "",
     address: "",
     city: "",
     state: "",
     zipCode: "",
-    phone: "",
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-    nameOnCard: "",
+    paymentMethod: "cod",
   })
 
-  const safeItems = items ?? []
-  const safeTotalPrice = totalPrice ?? 0
-  const itemCount = safeItems.length
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin?callbackUrl=/shop/checkout")
+      return
+    }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-  }
+    if (session?.user?.email) {
+      setFormData((prev) => ({ ...prev, email: session.user.email || "" }))
+    }
+
+    const savedCart = localStorage.getItem("cart")
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart)
+        setCartItems(Array.isArray(parsed) ? parsed : [])
+      } catch {
+        setCartItems([])
+      }
+    }
+    setLoading(false)
+  }, [session, status, router])
+
+  const items = cartItems ?? []
+  const subtotal = items.reduce((sum, item) => sum + (item?.price ?? 0) * (item?.quantity ?? 0), 0)
+  const shipping = subtotal > 0 ? 50 : 0
+  const total = subtotal + shipping
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (itemCount === 0) return
-
-    setLoading(true)
+    setSubmitting(true)
 
     try {
       const orderData = {
-        items: safeItems.map((item) => ({
-          productId: item?.productId || "",
-          quantity: item?.quantity || 1,
-          price: item?.price || 0,
+        items: items.map((item) => ({
+          productId: item._id,
+          quantity: item.quantity,
+          price: item.price,
         })),
+        totalAmount: total,
         shippingAddress: {
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -66,8 +90,7 @@ export default function CheckoutPage() {
           zipCode: formData.zipCode,
           phone: formData.phone,
         },
-        paymentMethod,
-        totalAmount: safeTotalPrice * 1.08,
+        paymentMethod: formData.paymentMethod,
       }
 
       const response = await fetch("/api/shop/orders", {
@@ -76,286 +99,224 @@ export default function CheckoutPage() {
         body: JSON.stringify(orderData),
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        if (clearCart) await clearCart()
-        router.push(`/shop/order-confirmation?orderId=${result.orderId}`)
+      const result = await response.json()
+
+      if (result.success) {
+        localStorage.removeItem("cart")
+        router.push(`/shop/orders/${result.order.orderNumber}`)
       } else {
-        throw new Error("Failed to place order")
+        alert(result.error || "Failed to place order")
       }
     } catch (error) {
-      console.error("Error placing order:", error)
-      alert("Failed to place order. Please try again.")
+      console.error("Checkout error:", error)
+      alert("An error occurred during checkout")
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
-  if (itemCount === 0) {
+  if (loading || status === "loading") {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">No items to checkout</h1>
-            <p className="text-gray-600 mb-8">Your cart is empty. Add some medicines to proceed with checkout.</p>
-            <Button asChild size="lg">
-              <Link href="/shop">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Continue Shopping
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <div className="container mx-auto px-4 py-16 text-center">
+        <p>Loading checkout...</p>
+      </div>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <ShoppingCart className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+        <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
+        <p className="text-gray-600 mb-8">Add some products to your cart before checking out.</p>
+        <Button asChild>
+          <Link href="/shop">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Continue Shopping
+          </Link>
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Checkout</h1>
-          <p className="text-gray-600">Complete your order securely</p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <Button variant="ghost" asChild>
+          <Link href="/shop/cart">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Cart
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Shipping Information</CardTitle>
+              <CardDescription>Enter your delivery details</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      required
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      required
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="email">
+                    <Mail className="inline h-4 w-4 mr-1" />
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone">
+                    <Phone className="inline h-4 w-4 mr-1" />
+                    Phone
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="address">
+                    <MapPin className="inline h-4 w-4 mr-1" />
+                    Address
+                  </Label>
+                  <Input
+                    id="address"
+                    required
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      required
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      required
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="zipCode">ZIP Code</Label>
+                    <Input
+                      id="zipCode"
+                      required
+                      value={formData.zipCode}
+                      onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                <div>
+                  <Label htmlFor="paymentMethod">
+                    <CreditCard className="inline h-4 w-4 mr-1" />
+                    Payment Method
+                  </Label>
+                  <select
+                    id="paymentMethod"
+                    className="w-full mt-1 px-3 py-2 border rounded-md"
+                    value={formData.paymentMethod}
+                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                  >
+                    <option value="cod">Cash on Delivery</option>
+                    <option value="card">Credit/Debit Card</option>
+                    <option value="upi">UPI</option>
+                  </select>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ? "Processing..." : `Place Order - ₹${total.toFixed(2)}`}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                    />
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                {items.map((item) => (
+                  <div key={item._id} className="flex justify-between text-sm">
+                    <span>
+                      {item.name} × {item.quantity}
+                    </span>
+                    <span>₹{((item.price ?? 0) * (item.quantity ?? 0)).toFixed(2)}</span>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Truck className="h-5 w-5" />
-                    Shipping Address
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input
-                        id="firstName"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
+              <Separator />
 
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Input id="address" name="address" value={formData.address} onChange={handleInputChange} required />
-                  </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Shipping</span>
+                  <span>₹{shipping.toFixed(2)}</span>
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input id="city" name="city" value={formData.city} onChange={handleInputChange} required />
-                    </div>
-                    <div>
-                      <Label htmlFor="state">State</Label>
-                      <Input id="state" name="state" value={formData.state} onChange={handleInputChange} required />
-                    </div>
-                    <div>
-                      <Label htmlFor="zipCode">ZIP Code</Label>
-                      <Input
-                        id="zipCode"
-                        name="zipCode"
-                        value={formData.zipCode}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
+              <Separator />
 
-                  <div>
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Payment Method
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="card" id="card" />
-                      <Label htmlFor="card">Credit/Debit Card</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="paypal" id="paypal" />
-                      <Label htmlFor="paypal">PayPal</Label>
-                    </div>
-                  </RadioGroup>
-
-                  {paymentMethod === "card" && (
-                    <div className="space-y-4 pt-4">
-                      <div>
-                        <Label htmlFor="nameOnCard">Name on Card</Label>
-                        <Input
-                          id="nameOnCard"
-                          name="nameOnCard"
-                          value={formData.nameOnCard}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="cardNumber">Card Number</Label>
-                        <Input
-                          id="cardNumber"
-                          name="cardNumber"
-                          placeholder="1234 5678 9012 3456"
-                          value={formData.cardNumber}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="expiryDate">Expiry Date</Label>
-                          <Input
-                            id="expiryDate"
-                            name="expiryDate"
-                            placeholder="MM/YY"
-                            value={formData.expiryDate}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="cvv">CVV</Label>
-                          <Input
-                            id="cvv"
-                            name="cvv"
-                            placeholder="123"
-                            value={formData.cvv}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {safeItems.map((item, idx) => (
-                    <div key={item?.productId || `item-${idx}`} className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{item?.name || "Product"}</p>
-                        <p className="text-sm text-gray-600">Qty: {item?.quantity || 1}</p>
-                      </div>
-                      <p className="font-medium">₹{((item?.price || 0) * (item?.quantity || 1)).toFixed(2)}</p>
-                    </div>
-                  ))}
-
-                  <Separator />
-
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>₹{safeTotalPrice.toFixed(2)}</span>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span className="text-green-600">Free</span>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>₹{(safeTotalPrice * 0.08).toFixed(2)}</span>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span>₹{(safeTotalPrice * 1.08).toFixed(2)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                    <Shield className="h-4 w-4" />
-                    <span>Your payment information is secure and encrypted</span>
-                  </div>
-
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Checkbox id="terms" required />
-                    <Label htmlFor="terms" className="text-sm">
-                      I agree to the Terms of Service and Privacy Policy
-                    </Label>
-                  </div>
-
-                  <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? "Processing..." : `Place Order - ₹${(safeTotalPrice * 1.08).toFixed(2)}`}
-                  </Button>
-
-                  <Button asChild variant="outline" className="w-full mt-2 bg-transparent">
-                    <Link href="/shop/cart">
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back to Cart
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </form>
+              <div className="flex justify-between font-bold text-lg">
+                <span>Total</span>
+                <span>₹{total.toFixed(2)}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

@@ -1,9 +1,9 @@
-export const dynamic = "force-dynamic"
-export const revalidate = 0
-
 import { type NextRequest, NextResponse } from "next/server"
 import dbConnect from "@/lib/dbConnect"
 import Donation from "@/models/Donation"
+
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,31 +11,23 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const category = searchParams.get("category")
-    const search = searchParams.get("search")
+    const available = searchParams.get("available")
 
-    const query: any = { status: "verified", isReserved: false }
+    const query: any = { status: "verified" }
+    if (category) query.category = category
+    if (available === "true") query.isReserved = false
 
-    if (category && category !== "all") {
-      query.category = category
-    }
-
-    if (search) {
-      query.$or = [
-        { medicineName: { $regex: search, $options: "i" } },
-        { brand: { $regex: search, $options: "i" } },
-        { genericName: { $regex: search, $options: "i" } },
-      ]
-    }
-
-    const medicines = await Donation.find(query).sort({ createdAt: -1 }).limit(50)
+    const medicines = await Donation.find(query).sort({ createdAt: -1 }).lean()
 
     return NextResponse.json({
       success: true,
-      medicines,
-      total: medicines.length,
+      medicines: medicines.map((m) => ({
+        ...m,
+        _id: m._id.toString(),
+      })),
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching medicines:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message || "Failed to fetch medicines" }, { status: 500 })
   }
 }

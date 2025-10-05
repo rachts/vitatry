@@ -1,9 +1,17 @@
-export const dynamic = "force-dynamic"
-export const revalidate = 0
-
 import { type NextRequest, NextResponse } from "next/server"
 import dbConnect from "@/lib/dbConnect"
 import Product from "@/models/Product"
+
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
+const formatINR = (price: number) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(price)
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,45 +19,65 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const category = searchParams.get("category")
-    const search = searchParams.get("search")
+    const verified = searchParams.get("verified")
 
-    const query: any = { verified: true, inStock: { $gt: 0 } }
+    const query: any = {}
+    if (category) query.category = category
+    if (verified === "true") query.verified = true
 
-    if (category && category !== "all") {
-      query.category = category
-    }
-
-    if (search) {
-      query.$or = [{ name: { $regex: search, $options: "i" } }, { description: { $regex: search, $options: "i" } }]
-    }
-
-    const products = await Product.find(query).sort({ createdAt: -1 }).limit(50)
-
-    const formatter = new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-    })
-
-    const productsWithINR = products.map((p) => ({
-      _id: p._id,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      priceInr: formatter.format(p.price),
-      inStock: p.inStock,
-      category: p.category,
-      imageUrl: p.imageUrl,
-      verified: p.verified,
-    }))
+    const products = await Product.find(query).sort({ createdAt: -1 }).lean()
 
     return NextResponse.json({
       success: true,
-      products: productsWithINR,
-      total: products.length,
+      products: products.map((p) => ({
+        ...p,
+        _id: p._id.toString(),
+        price: p.price,
+        priceInr: formatINR(p.price),
+      })),
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching products:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message || "Failed to fetch products" }, { status: 500 })
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    await dbConnect()
+
+    const body = await req.json()
+    const { name, description, price, inStock, category, imageUrl, verified } = body
+
+    if (!name || !description || price === undefined || inStock === undefined || !category) {
+      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
+    }
+
+    if (price < 1 || price > 500) {
+      return NextResponse.json({ success: false, error: "Price must be between ₹1 and ₹500" }, { status: 400 })
+    }
+
+    const product = await Product.create({
+      name,
+      description,
+      price,
+      inStock,
+      category,
+      imageUrl: imageUrl || undefined,
+      verified: verified || false,
+    })
+
+    return NextResponse.json({
+      success: true,
+      product: {
+        ...product.toObject(),
+        _id: product._id.toString(),
+        priceInr: formatINR(product.price),
+      },
+      message: "Product created successfully",
+    })
+  } catch (error: any) {
+    console.error("Error creating product:", error)
+    return NextResponse.json({ success: false, error: error.message || "Failed to create product" }, { status: 500 })
   }
 }

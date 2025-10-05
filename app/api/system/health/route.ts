@@ -1,24 +1,39 @@
+import { type NextRequest, NextResponse } from "next/server"
+import dbConnect from "@/lib/dbConnect"
+import mongoose from "mongoose"
+
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-import { NextResponse } from "next/server"
-import mongoose from "mongoose"
-import dbConnect from "@/lib/dbConnect"
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await dbConnect()
 
-    const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+    const isConnected = mongoose.connection.readyState === 1
 
-    let collectionCount = 0
+    if (!isConnected) {
+      return NextResponse.json(
+        {
+          success: false,
+          status: "unhealthy",
+          error: "Database not connected",
+        },
+        { status: 503 },
+      )
+    }
+
+    let dbStats = null
     try {
-      if (mongoose.connection.db) {
-        const collections = await mongoose.connection.db.listCollections().toArray()
-        collectionCount = collections.length
+      const db = mongoose.connection.db
+      if (db) {
+        const collectionsInfo = await db.listCollections().toArray()
+        dbStats = {
+          collections: collectionsInfo.length,
+          collectionNames: collectionsInfo.map((c) => c.name),
+        }
       }
-    } catch (statsError) {
-      console.error("Error getting collection count:", statsError)
+    } catch (statsError: any) {
+      console.warn("Could not fetch detailed DB stats:", statsError.message)
     }
 
     return NextResponse.json({
@@ -26,25 +41,22 @@ export async function GET() {
       status: "healthy",
       timestamp: new Date().toISOString(),
       database: {
-        status: dbStatus,
-        name: mongoose.connection.name || "unknown",
-        host: mongoose.connection.host || "unknown",
-        collections: collectionCount,
+        connected: true,
+        readyState: mongoose.connection.readyState,
+        host: mongoose.connection.host,
+        name: mongoose.connection.name,
+        stats: dbStats,
       },
       uptime: process.uptime(),
-      memory: {
-        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      },
-      environment: process.env.NODE_ENV || "development",
+      memory: process.memoryUsage(),
     })
-  } catch (error) {
-    console.error("Health check error:", error)
+  } catch (error: any) {
+    console.error("Health check failed:", error)
     return NextResponse.json(
       {
         success: false,
         status: "unhealthy",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error.message,
         timestamp: new Date().toISOString(),
       },
       { status: 503 },
