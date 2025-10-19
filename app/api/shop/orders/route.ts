@@ -7,21 +7,28 @@ import Cart from "@/models/Cart"
 import Product from "@/models/Product"
 import mongoose from "mongoose"
 
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     await dbConnect()
 
     const session = await getServerSession(authOptions)
     const { searchParams } = new URL(request.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const page = Math.max(Number.parseInt(searchParams.get("page") || "1"), 1)
+    const limit = Math.min(Number.parseInt(searchParams.get("limit") || "10"), 100)
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 })
+    }
 
     const query: any = {}
-
-    if (session?.user?.id) {
+    try {
       query.userId = session.user.id
-    } else {
-      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 })
+    } catch (e) {
+      return NextResponse.json({ success: false, error: "Invalid user ID" }, { status: 400 })
     }
 
     const skip = (page - 1) * limit
@@ -34,7 +41,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        orders,
+        orders: orders.map((o) => ({
+          ...o,
+          _id: o._id?.toString(),
+        })),
         pagination: {
           page,
           limit,
@@ -43,7 +53,7 @@ export async function GET(request: NextRequest) {
         },
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching orders:", error)
     return NextResponse.json({ success: false, error: "Failed to fetch orders" }, { status: 500 })
   }
@@ -68,62 +78,86 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!["credit_card", "debit_card", "upi", "netbanking"].includes(paymentMethod)) {
+      return NextResponse.json({ success: false, error: "Invalid payment method" }, { status: 400 })
+    }
+
+    // Validate shipping address
+    const { street, city, state, zipCode, country } = shippingAddress
+    if (!street || !city || !state || !zipCode || !country) {
+      return NextResponse.json({ success: false, error: "Complete shipping address is required" }, { status: 400 })
+    }
+
     const cartQuery: any = {}
 
     if (userSession?.user?.id) {
-      cartQuery.userId = userSession.user.id
+      try {
+        cartQuery.userId = new mongoose.Types.ObjectId(userSession.user.id)
+      } catch (e) {
+        return NextResponse.json({ success: false, error: "Invalid session" }, { status: 400 })
+      }
     } else if (sessionId) {
       cartQuery.sessionId = sessionId
     } else {
-      return NextResponse.json({ success: false, error: "Session ID required for guest users" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Session ID required" }, { status: 400 })
     }
 
     // Get cart
     const cart = await Cart.findOne(cartQuery).populate("items.productId").session(session)
-    if (!cart || cart.items.length === 0) {
+
+    if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+      await session.abortTransaction()
       return NextResponse.json({ success: false, error: "Cart is empty" }, { status: 400 })
     }
 
-    // Validate stock availability
+    // Validate stock availability for all items
     for (const item of cart.items) {
+      if (!item.productId) {
+        await session.abortTransaction()
+        return NextResponse.json({ success: false, error: "Invalid product in cart" }, { status: 400 })
+      }
+
       const product = await Product.findById(item.productId._id).session(session)
       if (!product || product.inStock < item.quantity) {
+        await session.abortTransaction()
         return NextResponse.json(
-          { success: false, error: `Insufficient stock for ${(item.productId as any).name}` },
+          {
+            success: false,
+            error: `Insufficient stock for ${(item.productId as any).name}`,
+          },
           { status: 400 },
         )
       }
     }
 
     // Calculate totals
-    const subtotal = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    let discount = 0
+    const subtotal = cart.items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 0), 0)
 
-    // Apply promo code
+    let discount = 0
     if (promoCode) {
-      if (promoCode.toUpperCase() === "VITAMEND10") {
+      const code = promoCode.toUpperCase()
+      if (code === "VITAMEND10") {
         discount = subtotal * 0.1
-      } else if (promoCode.toUpperCase() === "HEALTH20") {
+      } else if (code === "HEALTH20") {
         discount = subtotal * 0.2
       }
     }
 
     const shipping = subtotal > 50 ? 0 : 9.99
-    const tax = (subtotal - discount) * 0.08
+    const tax = Math.round((subtotal - discount) * 0.08 * 100) / 100
     const total = subtotal - discount + shipping + tax
 
-    // Create order items
-    const orderItems = cart.items.map((item) => ({
+    // Create order
+    const orderItems = cart.items.map((item: any) => ({
       productId: item.productId._id,
-      name: (item.productId as any).name,
-      category: (item.productId as any).category,
-      price: item.price,
-      quantity: item.quantity,
-      manufacturer: (item.productId as any).manufacturer,
+      name: (item.productId as any).name || "Unknown",
+      category: (item.productId as any).category || "Unknown",
+      price: item.price || 0,
+      quantity: item.quantity || 0,
+      manufacturer: (item.productId as any).manufacturer || "Unknown",
       expiryDate: (item.productId as any).expiryDate,
     }))
 
-    // Create order
     const order = new Order({
       userId: userSession?.user?.id,
       items: orderItems,
@@ -143,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     // Update product stock
     for (const item of cart.items) {
-      await Product.findByIdAndUpdate(item.productId._id, { $inc: { inStock: -item.quantity } }, { session })
+      await Product.findByIdAndUpdate(item.productId._id, { $inc: { inStock: -(item.quantity || 0) } }, { session })
     }
 
     // Clear cart
@@ -154,14 +188,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        data: order,
+        data: {
+          ...order.toObject(),
+          _id: order._id?.toString(),
+        },
       },
       { status: 201 },
     )
-  } catch (error) {
+  } catch (error: any) {
     await session.abortTransaction()
     console.error("Error creating order:", error)
-    return NextResponse.json({ success: false, error: "Failed to create order" }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message || "Failed to create order" }, { status: 500 })
   } finally {
     session.endSession()
   }

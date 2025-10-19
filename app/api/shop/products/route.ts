@@ -2,16 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import dbConnect from "@/lib/dbConnect"
 import Product from "@/models/Product"
 
+export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
-
-const formatINR = (price: number) => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(price)
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,26 +12,43 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const category = searchParams.get("category")
-    const verified = searchParams.get("verified")
+    const search = searchParams.get("search")
+    const limit = Math.min(Number.parseInt(searchParams.get("limit") || "50"), 100)
+    const page = Math.max(Number.parseInt(searchParams.get("page") || "1"), 1)
 
-    const query: any = {}
-    if (category) query.category = category
-    if (verified === "true") query.verified = true
+    const query: Record<string, any> = { verified: true }
 
-    const products = await Product.find(query).sort({ createdAt: -1 }).lean()
+    if (category) {
+      query.category = category
+    }
+
+    if (search) {
+      query.$text = { $search: search }
+    }
+
+    const skip = (page - 1) * limit
+
+    const [products, total] = await Promise.all([
+      Product.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Product.countDocuments(query),
+    ])
 
     return NextResponse.json({
       success: true,
       products: products.map((p) => ({
         ...p,
-        _id: p._id.toString(),
-        price: p.price,
-        priceInr: formatINR(p.price),
+        _id: p._id?.toString(),
       })),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     })
   } catch (error: any) {
     console.error("Error fetching products:", error)
-    return NextResponse.json({ success: false, error: error.message || "Failed to fetch products" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Failed to fetch products" }, { status: 500 })
   }
 }
 
@@ -47,35 +57,56 @@ export async function POST(req: NextRequest) {
     await dbConnect()
 
     const body = await req.json()
-    const { name, description, price, inStock, category, imageUrl, verified } = body
+    const { name, description, category, price, inStock, image, manufacturer, expiryDate, dosage, donationId } = body
 
-    if (!name || !description || price === undefined || inStock === undefined || !category) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
+    // Validate required fields
+    if (!name || !category || price === undefined || inStock === undefined || !manufacturer || !expiryDate) {
+      return NextResponse.json({ success: false, error: "Missing required product fields" }, { status: 400 })
     }
 
-    if (price < 1 || price > 500) {
-      return NextResponse.json({ success: false, error: "Price must be between ₹1 and ₹500" }, { status: 400 })
+    // Validate numeric fields
+    if (typeof price !== "number" || price < 0) {
+      return NextResponse.json({ success: false, error: "Price must be a non-negative number" }, { status: 400 })
+    }
+
+    if (typeof inStock !== "number" || inStock < 0) {
+      return NextResponse.json({ success: false, error: "Stock must be a non-negative number" }, { status: 400 })
+    }
+
+    // Validate expiry date
+    const expiryDateObj = new Date(expiryDate)
+    if (isNaN(expiryDateObj.getTime())) {
+      return NextResponse.json({ success: false, error: "Invalid expiry date" }, { status: 400 })
+    }
+
+    if (expiryDateObj <= new Date()) {
+      return NextResponse.json({ success: false, error: "Product has already expired" }, { status: 400 })
     }
 
     const product = await Product.create({
-      name,
-      description,
+      name: name.trim(),
+      description: description?.trim(),
+      category: category.trim(),
       price,
       inStock,
-      category,
-      imageUrl: imageUrl || undefined,
-      verified: verified || false,
+      image,
+      manufacturer: manufacturer.trim(),
+      expiryDate: expiryDateObj,
+      dosage: dosage?.trim(),
+      verified: true,
+      donationId,
     })
 
-    return NextResponse.json({
-      success: true,
-      product: {
-        ...product.toObject(),
-        _id: product._id.toString(),
-        priceInr: formatINR(product.price),
+    return NextResponse.json(
+      {
+        success: true,
+        product: {
+          ...product.toObject(),
+          _id: product._id?.toString(),
+        },
       },
-      message: "Product created successfully",
-    })
+      { status: 201 },
+    )
   } catch (error: any) {
     console.error("Error creating product:", error)
     return NextResponse.json({ success: false, error: error.message || "Failed to create product" }, { status: 500 })

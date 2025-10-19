@@ -1,47 +1,48 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import dbConnect from "@/lib/dbConnect"
+import connectDB from "@/lib/dbConnect"
 import Donation from "@/models/Donation"
-import User from "@/models/User"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  await dbConnect()
-
   try {
-    // Get user data
-    const user = await User.findById(session.user.id)
+    const session = await getServerSession(authOptions)
 
-    // Get user's donations
-    const donations = await Donation.find({ userId: session.user.id }).sort({ createdAt: -1 }).limit(10)
-
-    // Calculate volunteer stats (mock data for now)
-    const volunteerStats = {
-      hoursContributed: 25,
-      activitiesCompleted: 8,
-      impactScore: 150,
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get recent activity (mock data for now)
-    const recentActivity = [
-      { type: "donation", description: "Medicine donation verified", date: new Date() },
-      { type: "volunteer", description: "Completed collection drive", date: new Date() },
-    ]
+    await connectDB()
+
+    const userId = session.user.email
+
+    // Fetch donation stats
+    const donations = await Donation.countDocuments({ donorEmail: userId })
+    const medicinesVerified = await Donation.countDocuments({
+      donorEmail: userId,
+      status: "verified",
+    })
+    const livesHelpedData = await Donation.aggregate([
+      { $match: { donorEmail: userId, status: "distributed" } },
+      { $group: { _id: null, total: { $sum: "$quantity" } } },
+    ])
+    const livesHelped = livesHelpedData[0]?.total || 0
+
+    // Simple impact score calculation
+    const impactScore = donations * 10 + medicinesVerified * 5 + livesHelped
 
     return NextResponse.json({
       donations,
-      volunteerStats,
-      credits: user?.credits || 0,
-      recentActivity,
+      medicinesVerified,
+      livesHelped,
+      impactScore,
     })
   } catch (error) {
     console.error("Dashboard API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to fetch dashboard data" }, { status: 500 })
   }
 }

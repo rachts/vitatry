@@ -6,6 +6,10 @@ import Cart from "@/models/Cart"
 import Product from "@/models/Product"
 import mongoose from "mongoose"
 
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     await dbConnect()
@@ -16,63 +20,58 @@ export async function GET(request: NextRequest) {
     const query: any = {}
 
     if (session?.user?.id) {
-      query.userId = new mongoose.Types.ObjectId(session.user.id)
+      try {
+        query.userId = new mongoose.Types.ObjectId(session.user.id)
+      } catch (e) {
+        console.error("Invalid user ID:", e)
+        return NextResponse.json({ success: true, data: { items: [], totalAmount: 0, totalItems: 0 } })
+      }
     } else if (sessionId) {
       query.sessionId = sessionId
     } else {
       return NextResponse.json({
         success: true,
-        data: {
-          items: [],
-          totalAmount: 0,
-          totalItems: 0,
-        },
+        data: { items: [], totalAmount: 0, totalItems: 0 },
       })
     }
 
-    const cart = await Cart.findOne(query)
-      .populate({
-        path: "items.productId",
-        model: "Product",
-      })
-      .lean()
+    const cart = await Cart.findOne(query).populate("items.productId").lean()
 
-    if (!cart) {
+    if (!cart || !Array.isArray(cart.items)) {
       return NextResponse.json({
         success: true,
-        data: {
-          items: [],
-          totalAmount: 0,
-          totalItems: 0,
-        },
+        data: { items: [], totalAmount: 0, totalItems: 0 },
       })
     }
 
-    // Filter out products that are no longer available and format response
+    const now = new Date()
     const validItems = cart.items
       .filter((item: any) => {
-        const product = item.productId
-        return product && product.verified && product.inStock > 0 && new Date(product.expiryDate) > new Date()
+        const product = item?.productId
+        return product && product.verified === true && product.inStock > 0 && new Date(product.expiryDate) > now
       })
       .map((item: any) => ({
-        productId: item.productId._id.toString(),
-        name: item.productId.name,
-        price: item.price,
-        quantity: item.quantity,
+        productId: item.productId._id?.toString(),
+        name: item.productId.name || "Unknown",
+        price: item.price || 0,
+        quantity: item.quantity || 0,
         image: item.productId.image,
-        inStock: item.productId.inStock,
+        inStock: item.productId.inStock || 0,
         manufacturer: item.productId.manufacturer,
       }))
+
+    const totalAmount = validItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0)
+    const totalItems = validItems.reduce((sum: number, item: any) => sum + item.quantity, 0)
 
     return NextResponse.json({
       success: true,
       data: {
         items: validItems,
-        totalAmount: cart.totalAmount,
-        totalItems: cart.totalItems,
+        totalAmount,
+        totalItems,
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching cart:", error)
     return NextResponse.json({ success: false, error: "Failed to fetch cart" }, { status: 500 })
   }
@@ -87,27 +86,54 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { productId, quantity = 1 } = body
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return NextResponse.json({ success: false, error: "Invalid product ID" }, { status: 400 })
+    if (!productId) {
+      return NextResponse.json({ success: false, error: "Product ID is required" }, { status: 400 })
     }
 
-    // Verify product exists and is available
-    const product = await Product.findById(productId)
-    if (!product || !product.verified || product.inStock < quantity || product.expiryDate <= new Date()) {
-      return NextResponse.json({ success: false, error: "Product not available" }, { status: 400 })
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return NextResponse.json({ success: false, error: "Invalid product ID format" }, { status: 400 })
+    }
+
+    if (typeof quantity !== "number" || quantity <= 0) {
+      return NextResponse.json({ success: false, error: "Quantity must be a positive number" }, { status: 400 })
+    }
+
+    const product = await Product.findById(productId).lean()
+    if (!product) {
+      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
+    }
+
+    if (!product.verified) {
+      return NextResponse.json({ success: false, error: "Product is not available for purchase" }, { status: 400 })
+    }
+
+    if (product.inStock < quantity) {
+      return NextResponse.json(
+        { success: false, error: `Only ${product.inStock} items available in stock` },
+        { status: 400 },
+      )
+    }
+
+    if (new Date(product.expiryDate) <= new Date()) {
+      return NextResponse.json({ success: false, error: "Product has expired" }, { status: 400 })
     }
 
     const query: any = {}
     const cartData: any = {}
 
     if (session?.user?.id) {
-      query.userId = new mongoose.Types.ObjectId(session.user.id)
-      cartData.userId = new mongoose.Types.ObjectId(session.user.id)
+      try {
+        query.userId = new mongoose.Types.ObjectId(session.user.id)
+        cartData.userId = new mongoose.Types.ObjectId(session.user.id)
+      } catch (e) {
+        console.error("Invalid user ID:", e)
+        return NextResponse.json({ success: false, error: "Invalid session" }, { status: 400 })
+      }
     } else if (sessionId) {
       query.sessionId = sessionId
       cartData.sessionId = sessionId
     } else {
-      return NextResponse.json({ success: false, error: "Session ID required for guest users" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Session ID required" }, { status: 400 })
     }
 
     let cart = await Cart.findOne(query)
@@ -116,21 +142,20 @@ export async function POST(request: NextRequest) {
       cart = new Cart({
         ...cartData,
         items: [],
+        totalAmount: 0,
+        totalItems: 0,
       })
     }
 
-    // Check if item already exists in cart
-    const existingItemIndex = cart.items.findIndex((item: any) => item.productId.toString() === productId)
+    const existingItemIndex = (cart.items || []).findIndex((item: any) => item?.productId?.toString() === productId)
 
     if (existingItemIndex > -1) {
-      // Update quantity
-      const newQuantity = cart.items[existingItemIndex].quantity + quantity
+      const newQuantity = (cart.items[existingItemIndex].quantity || 0) + quantity
       if (newQuantity > product.inStock) {
         return NextResponse.json({ success: false, error: "Not enough stock available" }, { status: 400 })
       }
       cart.items[existingItemIndex].quantity = newQuantity
     } else {
-      // Add new item
       cart.items.push({
         productId: new mongoose.Types.ObjectId(productId),
         quantity,
@@ -139,21 +164,23 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Recalculate totals
+    cart.totalItems = cart.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
+    cart.totalAmount = cart.items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 0), 0)
+
     await cart.save()
+    await cart.populate("items.productId")
 
-    // Populate product details for response
-    await cart.populate({
-      path: "items.productId",
-      model: "Product",
-    })
-
-    return NextResponse.json({
-      success: true,
-      data: cart,
-    })
-  } catch (error) {
+    return NextResponse.json(
+      {
+        success: true,
+        data: cart,
+      },
+      { status: 201 },
+    )
+  } catch (error: any) {
     console.error("Error adding to cart:", error)
-    return NextResponse.json({ success: false, error: "Failed to add to cart" }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message || "Failed to add to cart" }, { status: 500 })
   }
 }
 
@@ -166,18 +193,26 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const { productId, quantity } = body
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
+    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
       return NextResponse.json({ success: false, error: "Invalid product ID" }, { status: 400 })
+    }
+
+    if (typeof quantity !== "number" || quantity < 0) {
+      return NextResponse.json({ success: false, error: "Quantity must be a non-negative number" }, { status: 400 })
     }
 
     const query: any = {}
 
     if (session?.user?.id) {
-      query.userId = new mongoose.Types.ObjectId(session.user.id)
+      try {
+        query.userId = new mongoose.Types.ObjectId(session.user.id)
+      } catch (e) {
+        return NextResponse.json({ success: false, error: "Invalid session" }, { status: 400 })
+      }
     } else if (sessionId) {
       query.sessionId = sessionId
     } else {
-      return NextResponse.json({ success: false, error: "Session ID required for guest users" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Session ID required" }, { status: 400 })
     }
 
     const cart = await Cart.findOne(query)
@@ -186,34 +221,40 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (quantity === 0) {
-      // Remove item from cart
-      cart.items = cart.items.filter((item: any) => item.productId.toString() !== productId)
+      cart.items = (cart.items || []).filter((item: any) => item?.productId?.toString() !== productId)
     } else {
-      // Update quantity
-      const product = await Product.findById(productId)
-      if (!product || quantity > product.inStock) {
-        return NextResponse.json({ success: false, error: "Invalid quantity or insufficient stock" }, { status: 400 })
+      const product = await Product.findById(productId).lean()
+      if (!product) {
+        return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
       }
 
-      const itemIndex = cart.items.findIndex((item: any) => item.productId.toString() === productId)
+      if (quantity > product.inStock) {
+        return NextResponse.json({ success: false, error: `Only ${product.inStock} items available` }, { status: 400 })
+      }
+
+      const itemIndex = (cart.items || []).findIndex((item: any) => item?.productId?.toString() === productId)
       if (itemIndex > -1) {
         cart.items[itemIndex].quantity = quantity
       }
     }
 
+    // Recalculate totals
+    cart.totalItems = (cart.items || []).reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
+    cart.totalAmount = (cart.items || []).reduce(
+      (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 0),
+      0,
+    )
+
     await cart.save()
-    await cart.populate({
-      path: "items.productId",
-      model: "Product",
-    })
+    await cart.populate("items.productId")
 
     return NextResponse.json({
       success: true,
       data: cart,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating cart:", error)
-    return NextResponse.json({ success: false, error: "Failed to update cart" }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message || "Failed to update cart" }, { status: 500 })
   }
 }
 
@@ -229,11 +270,15 @@ export async function DELETE(request: NextRequest) {
     const query: any = {}
 
     if (session?.user?.id) {
-      query.userId = new mongoose.Types.ObjectId(session.user.id)
+      try {
+        query.userId = new mongoose.Types.ObjectId(session.user.id)
+      } catch (e) {
+        return NextResponse.json({ success: false, error: "Invalid session" }, { status: 400 })
+      }
     } else if (sessionId) {
       query.sessionId = sessionId
     } else {
-      return NextResponse.json({ success: false, error: "Session ID required for guest users" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Session ID required" }, { status: 400 })
     }
 
     if (clearAll) {
@@ -244,10 +289,15 @@ export async function DELETE(request: NextRequest) {
       })
     }
 
-    if (productId) {
+    if (productId && mongoose.Types.ObjectId.isValid(productId)) {
       const cart = await Cart.findOne(query)
       if (cart) {
-        cart.items = cart.items.filter((item: any) => item.productId.toString() !== productId)
+        cart.items = (cart.items || []).filter((item: any) => item?.productId?.toString() !== productId)
+        cart.totalItems = (cart.items || []).reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
+        cart.totalAmount = (cart.items || []).reduce(
+          (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 0),
+          0,
+        )
         await cart.save()
       }
     }
@@ -256,8 +306,8 @@ export async function DELETE(request: NextRequest) {
       success: true,
       message: "Item removed successfully",
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error removing from cart:", error)
-    return NextResponse.json({ success: false, error: "Failed to remove from cart" }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message || "Failed to remove from cart" }, { status: 500 })
   }
 }

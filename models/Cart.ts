@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose, { Schema, type Document } from "mongoose"
 
 export interface ICartItem {
   productId: mongoose.Types.ObjectId
@@ -7,87 +7,37 @@ export interface ICartItem {
   addedAt: Date
 }
 
-export interface ICart extends mongoose.Document {
+export interface ICart extends Document {
   userId?: mongoose.Types.ObjectId
   sessionId?: string
   items: ICartItem[]
   totalAmount: number
   totalItems: number
-  expiresAt?: Date
   createdAt: Date
   updatedAt: Date
 }
 
-const CartItemSchema = new mongoose.Schema<ICartItem>({
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: true,
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 100,
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  addedAt: {
-    type: Date,
-    default: Date.now,
-  },
-})
-
-const CartSchema = new mongoose.Schema<ICart>(
+const CartSchema = new Schema<ICart>(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    sessionId: {
-      type: String,
-      trim: true,
-    },
-    items: [CartItemSchema],
-    totalAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    totalItems: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    expiresAt: {
-      type: Date,
-      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-    },
+    userId: { type: Schema.Types.ObjectId, ref: "User" },
+    sessionId: String,
+    items: [
+      {
+        productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+        quantity: { type: Number, required: true, min: 1 },
+        price: { type: Number, required: true, min: 0 },
+        addedAt: { type: Date, default: Date.now },
+      },
+    ],
+    totalAmount: { type: Number, default: 0, min: 0 },
+    totalItems: { type: Number, default: 0, min: 0 },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 )
 
-// Ensure either userId or sessionId is present
-CartSchema.pre("save", function () {
-  if (!this.userId && !this.sessionId) {
-    throw new Error("Either userId or sessionId must be provided")
-  }
-})
-
-// Calculate totals before saving
-CartSchema.pre("save", function () {
-  this.totalItems = this.items.reduce((sum, item) => sum + item.quantity, 0)
-  this.totalAmount = this.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-})
-
-// Indexes
-CartSchema.index({ userId: 1 })
-CartSchema.index({ sessionId: 1 })
-CartSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+// Create indexes
+CartSchema.index({ userId: 1 }, { sparse: true })
+CartSchema.index({ sessionId: 1 }, { sparse: true })
+CartSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 2592000 }) // 30 days TTL
 
 export default mongoose.models.Cart || mongoose.model<ICart>("Cart", CartSchema)

@@ -1,80 +1,90 @@
-import { type NextRequest, NextResponse } from "next/server"
-import dbConnect from "@/lib/dbConnect"
+import { NextResponse } from "next/server"
 import mongoose from "mongoose"
+import dbConnect from "@/lib/dbConnect"
 
+export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    // ✅ Attempt DB connection
+    const startTime = Date.now()
     await dbConnect()
+    const dbConnectionTime = Date.now() - startTime
 
-    const isConnected = mongoose.connection.readyState === 1
-
-    if (!isConnected) {
+    const db = mongoose.connection.db
+    if (!db) {
       return NextResponse.json(
         {
           success: false,
           status: "unhealthy",
-          error: "Database connection failed",
           timestamp: new Date().toISOString(),
+          error: "Database connection not initialized",
         },
-        { status: 503 }
+        { status: 503 },
       )
     }
 
-    // ✅ Try fetching database stats safely
-    let dbStats: {
-      collections: number
-      collectionNames: string[]
-    } | null = null
-
+    let collections: string[] = []
     try {
-      const db = mongoose.connection.db
-      if (db) {
-        const collectionsInfo = await db.listCollections().toArray()
-        dbStats = {
-          collections: collectionsInfo.length,
-          collectionNames: collectionsInfo.map((c) => c.name),
-        }
-      }
-    } catch (statsError: any) {
-      console.warn("⚠️ Could not fetch detailed DB stats:", statsError.message)
+      const list = await db.listCollections().toArray()
+      collections = list.map((c) => c.name)
+    } catch (e) {
+      console.error("Error listing collections:", e)
+      collections = []
     }
 
-    // ✅ Return comprehensive system health info
+    async function safeStats(name: string) {
+      try {
+        const stats = await db.command({ collStats: name })
+        return {
+          name,
+          count: stats?.count ?? 0,
+          size: stats?.size ?? 0,
+          avgObjSize: stats?.avgObjSize ?? 0,
+        }
+      } catch (e) {
+        console.error(`Error getting stats for ${name}:`, e)
+        return { name, count: 0, size: 0, avgObjSize: 0 }
+      }
+    }
+
+    const topCollections = ["users", "orders", "donations", "products", "carts"].filter((n) => collections.includes(n))
+    const stats = await Promise.all(topCollections.map((n) => safeStats(n)))
+
+    const totalSize = stats.reduce((sum, s) => sum + (s.size || 0), 0)
+    const totalDocuments = stats.reduce((sum, s) => sum + (s.count || 0), 0)
+
     return NextResponse.json({
       success: true,
       status: "healthy",
       timestamp: new Date().toISOString(),
-      database: {
-        connected: true,
-        readyState: mongoose.connection.readyState,
-        host: mongoose.connection.host || "N/A",
-        name: mongoose.connection.name || "N/A",
-        stats: dbStats,
+      performance: {
+        dbConnectionMs: dbConnectionTime,
       },
-      system: {
-        uptimeSeconds: process.uptime(),
-        memoryUsageMB: {
-          rss: (process.memoryUsage().rss / 1024 / 1024).toFixed(2),
-          heapTotal: (process.memoryUsage().heapTotal / 1024 / 1024).toFixed(2),
-          heapUsed: (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2),
-          external: (process.memoryUsage().external / 1024 / 1024).toFixed(2),
+      mongo: {
+        connected: true,
+        collections,
+        stats,
+        summary: {
+          totalCollections: collections.length,
+          totalDocuments,
+          totalSizeBytes: totalSize,
+          totalSizeMb: Math.round((totalSize / 1024 / 1024) * 100) / 100,
         },
       },
     })
   } catch (error: any) {
-    console.error("❌ Health check failed:", error)
+    console.error("Health check error:", error)
     return NextResponse.json(
       {
         success: false,
         status: "unhealthy",
-        error: error.message || "Health check error",
         timestamp: new Date().toISOString(),
+        error: error?.message || "Unknown error",
+        stack: process.env.NODE_ENV === "development" ? error?.stack : undefined,
       },
-      { status: 503 }
+      { status: 503 },
     )
   }
 }

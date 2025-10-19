@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { handleApiError } from "@/lib/api-error"
 import dbConnect from "@/lib/dbConnect"
 import Donation from "@/models/Donation"
 import mongoose from "mongoose"
@@ -21,6 +20,9 @@ const MedicineDistributionSchema = new mongoose.Schema({
 const MedicineDistribution =
   mongoose.models.MedicineDistribution || mongoose.model("MedicineDistribution", MedicineDistributionSchema)
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -33,7 +35,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const { medicineId, quantity } = await req.json()
+    const body = await req.json().catch(() => ({}))
+    const { ngoId, medicineId, quantity } = body || {}
+    if (!ngoId || !medicineId || !quantity) {
+      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
+    }
 
     // Parse the composite ID to get donation ID and medicine ID
     const [donationId, actualMedicineId] = medicineId.split("-")
@@ -86,6 +92,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, distribution })
   } catch (error) {
-    return handleApiError(error)
+    console.error("NGO request-medicine error:", error)
+    return NextResponse.json({ success: false, error: "Failed to submit request" }, { status: 500 })
   }
 }

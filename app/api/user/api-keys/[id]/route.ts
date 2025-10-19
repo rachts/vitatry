@@ -5,6 +5,9 @@ import { handleApiError, ApiError } from "@/lib/api-error"
 import dbConnect from "@/lib/dbConnect"
 import mongoose from "mongoose"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 // Get the ApiKey model
 const ApiKey = mongoose.models.ApiKey
 
@@ -12,12 +15,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
     const { id } = params
     if (!id) {
-      return NextResponse.json({ error: "API key ID is required" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "API key ID is required" }, { status: 400 })
     }
 
     await dbConnect()
@@ -36,7 +39,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     // Delete the API key
     await ApiKey.findByIdAndDelete(id)
 
-    return NextResponse.json({ message: "API key deleted successfully" })
+    return NextResponse.json({ success: true, message: "API key deleted successfully" })
   } catch (error) {
     return handleApiError(error)
   }

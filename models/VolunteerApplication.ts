@@ -4,11 +4,11 @@ export interface IVolunteerApplication extends Document {
   name: string
   email: string
   phone: string
-  role: string
-  availability: string
+  role: "verifier" | "collector" | "distributor" | "admin"
+  availability: "fulltime" | "parttime" | "weekends"
   experience?: string
   motivation?: string
-  status: string
+  status: "pending" | "approved" | "rejected"
   createdAt: Date
   updatedAt: Date
 }
@@ -16,19 +16,28 @@ export interface IVolunteerApplication extends Document {
 const VolunteerApplicationSchema = new Schema<IVolunteerApplication>(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true },
+    email: { type: String, required: true, lowercase: true, unique: true },
     phone: { type: String, required: true },
-    role: { type: String, required: true },
-    availability: { type: String, required: true },
-    experience: { type: String },
-    motivation: { type: String },
-    status: { type: String, default: "pending" },
+    role: {
+      type: String,
+      enum: ["verifier", "collector", "distributor", "admin"],
+      required: true,
+    },
+    availability: {
+      type: String,
+      enum: ["fulltime", "parttime", "weekends"],
+      required: true,
+    },
+    experience: String,
+    motivation: String,
+    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   },
   { timestamps: true },
 )
 
-VolunteerApplicationSchema.index({ email: 1 })
-VolunteerApplicationSchema.index({ status: 1 })
+// Create indexes
+VolunteerApplicationSchema.index({ email: 1 }, { unique: true })
+VolunteerApplicationSchema.index({ status: 1, createdAt: -1 })
 
 export default mongoose.models.VolunteerApplication ||
   mongoose.model<IVolunteerApplication>("VolunteerApplication", VolunteerApplicationSchema)

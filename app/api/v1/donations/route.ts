@@ -7,6 +7,9 @@ import dbConnect from "@/lib/dbConnect"
 import Donation from "@/models/Donation"
 import { verifyApiKey } from "@/lib/api-auth"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   maxRequests: 100, // 100 requests per window

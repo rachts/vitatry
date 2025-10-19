@@ -4,99 +4,86 @@ import { authOptions } from "@/lib/auth"
 import dbConnect from "@/lib/dbConnect"
 import Donation from "@/models/Donation"
 
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !["admin", "reviewer"].includes(session.user.role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
 
-    const { searchParams } = new URL(req.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
-    const status = searchParams.get("status")
-    const search = searchParams.get("search")
-    const sortBy = searchParams.get("sortBy") || "createdAt"
-    const sortOrder = searchParams.get("sortOrder") || "desc"
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+    }
 
     await dbConnect()
 
-    // Build query
-    const query: any = {}
-    if (status) {
-      query.status = status
-    }
-    if (search) {
-      query.$or = [
-        { "donorInfo.name": { $regex: search, $options: "i" } },
-        { "donorInfo.email": { $regex: search, $options: "i" } },
-        { "medicines.name": { $regex: search, $options: "i" } },
-      ]
-    }
+    const { searchParams } = new URL(req.url)
+    const status = searchParams.get("status")
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "20")
 
-    // Get total count
-    const total = await Donation.countDocuments(query)
+    const query = status ? { status } : {}
+    const skip = (page - 1) * limit
 
-    // Get donations with pagination
-    const donations = await Donation.find(query)
-      .sort({ [sortBy]: sortOrder === "desc" ? -1 : 1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("userId", "name email")
-      .populate("reviewedBy", "name email")
+    const [donations, total] = await Promise.all([
+      Donation.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Donation.countDocuments(query),
+    ])
 
     return NextResponse.json({
-      donations,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      success: true,
+      donations: donations.map((d) => ({
+        ...d,
+        _id: d._id?.toString(),
+      })),
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     })
-  } catch (error) {
-    console.error("Error fetching donations:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    console.error("Admin donations GET error:", error)
+    return NextResponse.json({ success: false, error: error.message || "Failed to fetch donations" }, { status: 500 })
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !["admin", "reviewer"].includes(session.user.role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { donationIds, action, status, reviewNotes } = body
+    const { donationId, status, verificationNotes } = await req.json()
 
-    if (!donationIds || !Array.isArray(donationIds) || donationIds.length === 0) {
-      return NextResponse.json({ error: "Invalid donation IDs" }, { status: 400 })
+    if (!donationId || !status) {
+      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
     }
 
     await dbConnect()
 
-    const updates: any = {
-      updatedAt: new Date(),
-      reviewedBy: session.user.id,
-      reviewedAt: new Date(),
-    }
+    const donation = await Donation.findByIdAndUpdate(
+      donationId,
+      {
+        status,
+        verificationNotes,
+        reviewedBy: session.user.id,
+      },
+      { new: true },
+    )
 
-    if (status) {
-      updates.status = status
+    if (!donation) {
+      return NextResponse.json({ success: false, error: "Donation not found" }, { status: 404 })
     }
-    if (reviewNotes) {
-      updates.reviewNotes = reviewNotes
-    }
-
-    const result = await Donation.updateMany({ _id: { $in: donationIds } }, updates)
 
     return NextResponse.json({
-      message: `${result.modifiedCount} donations updated successfully`,
-      modifiedCount: result.modifiedCount,
+      success: true,
+      donation: {
+        ...donation.toObject(),
+        _id: donation._id?.toString(),
+      },
     })
-  } catch (error) {
-    console.error("Error bulk updating donations:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    console.error("Admin donations PATCH error:", error)
+    return NextResponse.json({ success: false, error: error.message || "Failed to update donation" }, { status: 500 })
   }
 }

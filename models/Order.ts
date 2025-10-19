@@ -1,74 +1,91 @@
-import mongoose, { Schema, Document, Model } from "mongoose"
+import mongoose, { Schema, type Document } from "mongoose"
 
-// 🧾 Order Interface
+export interface IOrderItem {
+  productId: mongoose.Types.ObjectId
+  name: string
+  category: string
+  price: number
+  quantity: number
+  manufacturer: string
+  expiryDate: Date
+}
+
 export interface IOrder extends Document {
-  orderNumber: string
-  userId: string
-  items: Array<{
-    productId: string
-    quantity: number
-    price: number
-  }>
-  totalAmount: number
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled"
+  userId?: string
+  items: IOrderItem[]
   shippingAddress: {
-    firstName: string
-    lastName: string
-    address: string
+    street: string
     city: string
     state: string
     zipCode: string
-    phone: string
+    country: string
   }
-  paymentMethod: "cod" | "card" | "upi" | string
+  paymentMethod: "credit_card" | "debit_card" | "upi" | "netbanking"
+  subtotal: number
+  discount: number
+  tax: number
+  shipping: number
+  total: number
+  promoCode?: string
+  paymentStatus: "pending" | "completed" | "failed" | "refunded"
+  orderStatus: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"
+  trackingNumber?: string
+  notes?: string
   createdAt: Date
   updatedAt: Date
 }
 
-// 🏗️ Schema Definition
-const OrderSchema: Schema<IOrder> = new Schema(
+const OrderSchema = new Schema<IOrder>(
   {
-    orderNumber: { type: String, required: true, unique: true },
-    userId: { type: String, required: true, index: true },
+    userId: String,
     items: [
       {
-        productId: { type: String, required: true },
-        quantity: { type: Number, required: true },
+        productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+        name: { type: String, required: true },
+        category: { type: String, required: true },
         price: { type: Number, required: true },
+        quantity: { type: Number, required: true },
+        manufacturer: { type: String, required: true },
+        expiryDate: { type: Date, required: true },
       },
     ],
-    totalAmount: { type: Number, required: true },
-    status: {
-      type: String,
-      enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
-      default: "pending",
-      index: true,
-    },
     shippingAddress: {
-      firstName: { type: String, required: true },
-      lastName: { type: String, required: true },
-      address: { type: String, required: true },
+      street: { type: String, required: true },
       city: { type: String, required: true },
       state: { type: String, required: true },
       zipCode: { type: String, required: true },
-      phone: { type: String, required: true },
+      country: { type: String, required: true },
     },
     paymentMethod: {
       type: String,
+      enum: ["credit_card", "debit_card", "upi", "netbanking"],
       required: true,
-      enum: ["cod", "card", "upi"],
-      default: "cod",
     },
+    subtotal: { type: Number, required: true, min: 0 },
+    discount: { type: Number, default: 0, min: 0 },
+    tax: { type: Number, required: true, min: 0 },
+    shipping: { type: Number, required: true, min: 0 },
+    total: { type: Number, required: true, min: 0 },
+    promoCode: String,
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "completed", "failed", "refunded"],
+      default: "pending",
+    },
+    orderStatus: {
+      type: String,
+      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
+      default: "pending",
+    },
+    trackingNumber: String,
+    notes: String,
   },
-  { timestamps: true }
+  { timestamps: true },
 )
 
-// ✅ Indexes for faster queries
-OrderSchema.index({ userId: 1 })
-OrderSchema.index({ status: 1 })
-OrderSchema.index({ orderNumber: 1 })
+// Create indexes
+OrderSchema.index({ userId: 1, createdAt: -1 })
+OrderSchema.index({ orderStatus: 1 })
+OrderSchema.index({ createdAt: -1 })
 
-// ⚡ Hot reload safe export
-const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema)
-
-export default Order
+export default mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema)

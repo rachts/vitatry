@@ -1,4 +1,4 @@
-import mongoose, { type Document, Schema } from "mongoose"
+import mongoose, { Schema, type Document } from "mongoose"
 
 export interface IDonation extends Document {
   donationId: string
@@ -8,8 +8,8 @@ export interface IDonation extends Document {
   dosage: string
   quantity: number
   expiryDate: Date
-  condition: "new" | "opened_unused" | "partially_used"
-  category: "pain_relief" | "antibiotics" | "vitamins" | "chronic_disease" | "other"
+  condition: "unopened" | "opened" | "partial"
+  category: string
   donorName: string
   donorEmail: string
   donorPhone: string
@@ -17,71 +17,49 @@ export interface IDonation extends Document {
   notes?: string
   images: string[]
   status: "pending" | "verified" | "rejected" | "distributed"
-  verificationNotes?: string
-  verifiedBy?: string
-  verifiedAt?: Date
-  distributedTo?: string
-  distributedAt?: Date
   isReserved: boolean
   reservedBy?: string
-  reservedAt?: Date
+  aiVerification?: {
+    verified: boolean
+    confidence: number
+    notes: string
+  }
   createdAt: Date
   updatedAt: Date
 }
 
 const DonationSchema = new Schema<IDonation>(
   {
-    donationId: { type: String, required: true, unique: true },
-    medicineName: { type: String, required: true, trim: true },
-    brand: { type: String, required: true, trim: true },
-    genericName: { type: String, trim: true },
-    dosage: { type: String, required: true, trim: true },
+    donationId: { type: String, required: true, unique: true, index: true },
+    medicineName: { type: String, required: true },
+    brand: { type: String, required: true },
+    genericName: String,
+    dosage: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
-    expiryDate: {
-      type: Date,
-      required: true,
-      validate: {
-        validator: (date: Date) => {
-          const sixMonthsFromNow = new Date()
-          sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
-          return date > sixMonthsFromNow
-        },
-        message: "Medicine must have at least 6 months before expiry",
-      },
-    },
-    condition: { type: String, required: true, enum: ["new", "opened_unused", "partially_used"] },
-    category: {
-      type: String,
-      required: true,
-      enum: ["pain_relief", "antibiotics", "vitamins", "chronic_disease", "other"],
-    },
-    donorName: { type: String, required: true, trim: true },
-    donorEmail: { type: String, required: true, trim: true, lowercase: true },
-    donorPhone: { type: String, required: true, trim: true },
-    donorAddress: { type: String, required: true, trim: true },
-    notes: { type: String, trim: true },
-    images: [{ type: String }],
-    status: {
-      type: String,
-      required: true,
-      enum: ["pending", "verified", "rejected", "distributed"],
-      default: "pending",
-    },
-    verificationNotes: { type: String, trim: true },
-    verifiedBy: { type: String, trim: true },
-    verifiedAt: { type: Date },
-    distributedTo: { type: String, trim: true },
-    distributedAt: { type: Date },
+    expiryDate: { type: Date, required: true },
+    condition: { type: String, enum: ["unopened", "opened", "partial"], required: true },
+    category: { type: String, required: true },
+    donorName: { type: String, required: true },
+    donorEmail: { type: String, required: true, lowercase: true },
+    donorPhone: { type: String, required: true },
+    donorAddress: { type: String, required: true },
+    notes: String,
+    images: [String],
+    status: { type: String, enum: ["pending", "verified", "rejected", "distributed"], default: "pending" },
     isReserved: { type: Boolean, default: false },
-    reservedBy: { type: String, trim: true },
-    reservedAt: { type: Date },
+    reservedBy: String,
+    aiVerification: {
+      verified: Boolean,
+      confidence: Number,
+      notes: String,
+    },
   },
   { timestamps: true },
 )
 
-DonationSchema.index({ status: 1, isReserved: 1 })
-DonationSchema.index({ category: 1, status: 1 })
-DonationSchema.index({ donorEmail: 1 })
-DonationSchema.index({ createdAt: -1 })
+// Create indexes
+DonationSchema.index({ status: 1, createdAt: -1 })
+DonationSchema.index({ donationId: 1 }, { unique: true })
+DonationSchema.index({ category: 1 })
 
 export default mongoose.models.Donation || mongoose.model<IDonation>("Donation", DonationSchema)

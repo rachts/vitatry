@@ -1,74 +1,98 @@
-/**
- * Project: Vitamend
- * Creator: Rachit Kumar Tiwari
- */
-import type { NextRequest } from "next/server"
-import { api } from "@/lib/api-response"
-import { withCors, preflight } from "@/lib/cors"
-import { checkRateLimit } from "@/lib/rate-limit"
-import { logger } from "@/lib/logger"
+import { type NextRequest, NextResponse } from "next/server"
 import dbConnect from "@/lib/dbConnect"
 import Product from "@/models/Product"
-import mongoose from "mongoose"
-import { z } from "zod"
 
-const updateSchema = z.object({
-  name: z.string().min(2).optional(),
-  description: z.string().min(10).optional(),
-  image: z.string().url().optional(),
-  expiryDate: z.coerce.date().optional(),
-  inStock: z.coerce.number().int().nonnegative().optional(),
-  manufacturer: z.string().min(2).optional(),
-  category: z.string().min(2).optional(),
-  price: z.coerce.number().min(10).max(200).optional(),
-  verified: z.boolean().optional(),
-})
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
-export async function OPTIONS(req: NextRequest) {
-  return preflight(req)
+const formatINR = (price: number) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(price)
 }
 
-export async function PUT(req: NextRequest, ctx: { params: { id: string } }) {
-  const rl = checkRateLimit(req)
-  if (!rl.allowed) return withCors(req, api.badRequest("Too many requests"))
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await dbConnect()
-  } catch {
-    return withCors(req, api.error("Database connection failed"))
-  }
-  try {
-    const { id } = ctx.params
-    if (!mongoose.Types.ObjectId.isValid(id)) return withCors(req, api.badRequest("Invalid ID"))
-    const body = await req.json()
-    const parsed = updateSchema.safeParse(body)
-    if (!parsed.success) return withCors(req, api.badRequest("Invalid payload"))
-    if (parsed.data.expiryDate && parsed.data.expiryDate <= new Date())
-      return withCors(req, api.badRequest("Expiry date must be in the future"))
-    const updated = await Product.findByIdAndUpdate(id, parsed.data, { new: true }).lean()
-    if (!updated) return withCors(req, api.notFound("Product not found"))
-    return withCors(req, api.ok(updated))
-  } catch (e) {
-    logger.error("PUT /api/shop/products/[id]", e)
-    return withCors(req, api.error("Failed to update product"))
+
+    const { id } = params
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Product ID is required" }, { status: 400 })
+    }
+
+    const product = await Product.findById(id).lean()
+
+    if (!product) {
+      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      product: {
+        ...product,
+        _id: product._id?.toString(),
+        priceInr: formatINR(product.price),
+      },
+    })
+  } catch (error: any) {
+    console.error("Product GET error:", error)
+    return NextResponse.json({ success: false, error: error.message || "Failed to fetch product" }, { status: 500 })
   }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) {
-  const rl = checkRateLimit(req)
-  if (!rl.allowed) return withCors(req, api.badRequest("Too many requests"))
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await dbConnect()
-  } catch {
-    return withCors(req, api.error("Database connection failed"))
+
+    const { id } = params
+    const updates = await req.json()
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Product ID is required" }, { status: 400 })
+    }
+
+    const product = await Product.findByIdAndUpdate(id, updates, { new: true }).lean()
+
+    if (!product) {
+      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      product: {
+        ...product,
+        _id: product._id?.toString(),
+        priceInr: formatINR(product.price),
+      },
+    })
+  } catch (error: any) {
+    console.error("Product PATCH error:", error)
+    return NextResponse.json({ success: false, error: error.message || "Failed to update product" }, { status: 500 })
   }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = ctx.params
-    if (!mongoose.Types.ObjectId.isValid(id)) return withCors(req, api.badRequest("Invalid ID"))
-    const deleted = await Product.findByIdAndDelete(id).lean()
-    if (!deleted) return withCors(req, api.notFound("Product not found"))
-    return withCors(req, api.ok({ id }))
-  } catch (e) {
-    logger.error("DELETE /api/shop/products/[id]", e)
-    return withCors(req, api.error("Failed to delete product"))
+    await dbConnect()
+
+    const { id } = params
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Product ID is required" }, { status: 400 })
+    }
+
+    await Product.findByIdAndDelete(id)
+
+    return NextResponse.json({
+      success: true,
+      message: "Product deleted successfully",
+    })
+  } catch (error: any) {
+    console.error("Product DELETE error:", error)
+    return NextResponse.json({ success: false, error: error.message || "Failed to delete product" }, { status: 500 })
   }
 }

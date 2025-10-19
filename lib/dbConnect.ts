@@ -1,52 +1,56 @@
 import mongoose from "mongoose"
 
 declare global {
-  var __mongooseCache: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } | undefined
+  var mongooseCache: {
+    conn: typeof mongoose | null
+    promise: Promise<typeof mongoose> | null
+  }
 }
 
-const MONGODB_URI =
-  process.env.MONGODB_URI ||
-  "mongodb+srv://vitamendorg:rachit.1@vitamend.4hji7qs.mongodb.net/?retryWrites=true&w=majority&appName=VitaMend"
-
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI is not defined in environment variables")
-}
-
-let cached = global.__mongooseCache
+let cached = global.mongooseCache
 
 if (!cached) {
-  cached = global.__mongooseCache = { conn: null, promise: null }
+  cached = global.mongooseCache = { conn: null, promise: null }
 }
 
 export default async function dbConnect() {
-  if (cached!.conn) {
-    return cached!.conn
-  }
-
-  if (!cached!.promise) {
-    const opts = {
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
+  try {
+    if (cached.conn) {
+      console.log("Using cached MongoDB connection")
+      return cached.conn
     }
 
-    cached!.promise = mongoose
-      .connect(MONGODB_URI, opts)
-      .then((mongoose) => {
-        return mongoose
-      })
-      .catch((error) => {
-        cached!.promise = null
-        throw error
-      })
-  }
+    if (!cached.promise) {
+      const MONGODB_URI = process.env.MONGODB_URI
 
-  try {
-    cached!.conn = await cached!.promise
-  } catch (e) {
-    cached!.promise = null
-    throw e
-  }
+      if (!MONGODB_URI) {
+        throw new Error("MONGODB_URI environment variable not set")
+      }
 
-  return cached!.conn
+      const opts = {
+        bufferCommands: false,
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+      }
+
+      console.log("Creating new MongoDB connection...")
+      cached.promise = mongoose
+        .connect(MONGODB_URI, opts)
+        .then((m) => {
+          console.log("MongoDB connected successfully")
+          return m
+        })
+        .catch((err) => {
+          console.error("MongoDB connection error:", err.message)
+          cached.promise = null
+          throw err
+        })
+    }
+
+    cached.conn = await cached.promise
+    return cached.conn
+  } catch (error) {
+    console.error("dbConnect error:", error)
+    throw error
+  }
 }

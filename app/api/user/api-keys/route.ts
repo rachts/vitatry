@@ -6,6 +6,9 @@ import dbConnect from "@/lib/dbConnect"
 import { generateApiKey } from "@/lib/api-auth"
 import mongoose from "mongoose"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 // Get the ApiKey model
 const ApiKey = mongoose.models.ApiKey
 
@@ -43,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { name } = await req.json()
+    const { name } = await req.json().catch(() => ({}))
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 })
     }
@@ -69,6 +72,7 @@ export async function POST(req: NextRequest) {
       { status: 201 },
     )
   } catch (error) {
-    return handleApiError(error)
+    console.error("Create API key error:", error)
+    return NextResponse.json({ success: false, error: "Failed to create key" }, { status: 500 })
   }
 }

@@ -2,14 +2,16 @@ import mongoose, { Schema, type Document } from "mongoose"
 
 export interface IProduct extends Document {
   name: string
-  description: string
+  description?: string
+  category: string
   price: number
   inStock: number
-  category: string
-  imageUrl?: string
+  image?: string
+  manufacturer: string
+  expiryDate: Date
+  dosage?: string
   verified: boolean
-  verificationDate?: Date
-  expiryDate?: Date
+  donationId?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -17,20 +19,23 @@ export interface IProduct extends Document {
 const ProductSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true },
-    description: { type: String, required: true },
-    price: { type: Number, required: true, min: 1, max: 500 },
-    inStock: { type: Number, required: true, default: 0 },
+    description: String,
     category: { type: String, required: true },
-    imageUrl: { type: String },
+    price: { type: Number, required: true, min: 0 },
+    inStock: { type: Number, required: true, default: 0, min: 0 },
+    image: String,
+    manufacturer: { type: String, required: true },
+    expiryDate: { type: Date, required: true },
+    dosage: String,
     verified: { type: Boolean, default: false },
-    verificationDate: { type: Date },
-    expiryDate: { type: Date },
+    donationId: String,
   },
   { timestamps: true },
 )
 
-ProductSchema.index({ name: 1 })
-ProductSchema.index({ verified: 1, inStock: 1 })
-ProductSchema.index({ category: 1 })
+// Create indexes
+ProductSchema.index({ name: "text", description: "text" })
+ProductSchema.index({ category: 1, verified: 1 })
+ProductSchema.index({ expiryDate: 1 })
 
 export default mongoose.models.Product || mongoose.model<IProduct>("Product", ProductSchema)

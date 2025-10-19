@@ -1,18 +1,18 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Toaster } from "sonner"
-import { SessionProvider } from "@/components/session-provider"
+import { ThemeProvider } from "@/context/ThemeContext"
 import Navigation from "@/components/navigation"
-import { CartProvider } from "@/components/shop/cart-provider"
-
-const inter = Inter({ subsets: ["latin"] })
+import { SessionProvider } from "@/components/session-provider"
+import { Toaster } from "@/components/ui/toaster"
+import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "VitaMend - Medicine Donation Platform",
-  description: "Donate unused medicines and help reduce medical waste while improving healthcare access.",
-  keywords: "medicine donation, healthcare, medical waste, charity, NGO",
+  title: "VitaMend - Reviving Medicines, Restoring Lives",
+  description: "Donate unused medicines and help those in need through AI-verified distribution.",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
     generator: 'v0.app'
 }
 
@@ -22,15 +22,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <SessionProvider>
-          <CartProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#10b981" />
+      </head>
+      <body className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors">
+        <ThemeProvider>
+          <SessionProvider>
             <Navigation />
             <main className="min-h-screen">{children}</main>
-            <Toaster position="top-right" richColors closeButton duration={4000} />
-          </CartProvider>
-        </SessionProvider>
+            <Toaster />
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
