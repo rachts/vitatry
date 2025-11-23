@@ -164,7 +164,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Recalculate totals
     cart.totalItems = cart.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
     cart.totalAmount = cart.items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 0), 0)
 
@@ -238,7 +237,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Recalculate totals
     cart.totalItems = (cart.items || []).reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
     cart.totalAmount = (cart.items || []).reduce(
       (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 0),

@@ -27,7 +27,7 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true },
 )
 
-// Ensure email index exists only once
-UserSchema.index({ email: 1 }, { unique: true, sparse: true })
+UserSchema.index({ email: 1 }, { unique: true })
+UserSchema.index({ role: 1 })
 
 export default mongoose.models.User || mongoose.model<IUser>("User", UserSchema)

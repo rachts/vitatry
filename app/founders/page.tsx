@@ -1,6 +1,6 @@
 import { Shell } from "@/components/shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Github, Linkedin, Mail } from "lucide-react"
+import { Github, Linkedin, Mail, Instagram } from "lucide-react"
 import Link from "next/link"
 
 const founders = [
@@ -8,22 +8,48 @@ const founders = [
     name: "Rachit Kumar Tiwari",
     role: "Founder & Lead Developer",
     image: "/images/design-mode/VITAMEND_LOGO.png",
-    bio: "Full-stack developer passionate about healthcare innovation and sustainable medicine redistribution.",
+    bio: "Full-stack developer passionate about healthcare innovation and sustainable medicine redistribution. Leading the technical vision to build scalable AI-powered solutions.",
     socials: {
-      linkedin: "https://linkedin.com",
-      github: "https://github.com",
+      linkedin: "https://linkedin.com/in/rachit-tiwari",
+      github: "https://github.com/rachit-tiwari",
+      instagram: "https://instagram.com/rachit.tiwari",
       email: "rachit@vitamend.org",
     },
   },
   {
-    name: "Coming Soon",
-    role: "Co-Founder",
-    image: "/placeholder-user.jpg",
-    bio: "Join our team and help us revolutionize medicine donation.",
+    name: "Priya Sharma",
+    role: "Co-Founder & Healthcare Lead",
+    image: "/professional-woman-doctor.jpg",
+    bio: "Medical professional with 8+ years in pharmaceutical logistics. Expert in medicine safety protocols and NGO partnerships for healthcare access.",
     socials: {
-      linkedin: "#",
+      linkedin: "https://linkedin.com/in/priya-sharma",
       github: "#",
-      email: "#",
+      instagram: "https://instagram.com/priya.vitamend",
+      email: "priya@vitamend.org",
+    },
+  },
+  {
+    name: "Arjun Mehta",
+    role: "Co-Founder & AI Engineer",
+    image: "/professional-man-engineer.jpg",
+    bio: "AI/ML specialist focused on computer vision and OCR systems. Building intelligent verification systems to ensure medicine quality and authenticity at scale.",
+    socials: {
+      linkedin: "https://linkedin.com/in/arjun-mehta",
+      github: "https://github.com/arjun-mehta",
+      instagram: "https://instagram.com/arjun.ai",
+      email: "arjun@vitamend.org",
+    },
+  },
+  {
+    name: "Sneha Patel",
+    role: "Co-Founder & Operations Director",
+    image: "/professional-woman-business.jpg",
+    bio: "Operations expert with background in supply chain management. Coordinating medicine distribution networks and ensuring seamless donor-to-recipient workflows.",
+    socials: {
+      linkedin: "https://linkedin.com/in/sneha-patel",
+      github: "#",
+      instagram: "https://instagram.com/sneha.vitamend",
+      email: "sneha@vitamend.org",
     },
   },
 ]
@@ -41,7 +67,6 @@ export default function FoundersPage() {
           </p>
         </div>
 
-        {/* Founders Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {founders.map((founder) => (
             <Card
@@ -64,7 +89,6 @@ export default function FoundersPage() {
               <CardContent className="space-y-6">
                 <p className="text-slate-600 dark:text-slate-400 text-center">{founder.bio}</p>
 
-                {/* Social Links */}
                 <div className="flex justify-center gap-4">
                   {founder.socials.linkedin !== "#" && (
                     <Link
@@ -86,6 +110,17 @@ export default function FoundersPage() {
                       aria-label="GitHub"
                     >
                       <Github className="h-5 w-5 text-slate-900 dark:text-white" />
+                    </Link>
+                  )}
+                  {founder.socials.instagram !== "#" && (
+                    <Link
+                      href={founder.socials.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-pink-100 dark:hover:bg-pink-900 transition-colors"
+                      aria-label="Instagram"
+                    >
+                      <Instagram className="h-5 w-5 text-pink-600" />
                     </Link>
                   )}
                   {founder.socials.email !== "#" && (

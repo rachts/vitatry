@@ -19,17 +19,13 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
-  // Force standalone output for proper API bundling
+  // CRITICAL: Force standalone output for proper API bundling
   output: "standalone",
-  
-  experimental: {
-    serverActions: {
-      allowedOrigins: ["localhost:3000", "*.vercel.app"],
-    },
-  },
 
-  // Prevent static optimization of dynamic routes
-  staticPageGenerationTimeout: 60,
+  // CRITICAL: Tell Next.js mongoose is an external package for Node.js
+  experimental: {
+    serverComponentsExternalPackages: ["mongoose"],
+  },
 
   compress: true,
   poweredByHeader: false,
@@ -52,23 +48,13 @@ const nextConfig = {
             key: "Referrer-Policy",
             value: "origin-when-cross-origin",
           },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
         ],
       },
     ]
-  },
-
-  // Redirect config
-  async redirects() {
-    return []
-  },
-
-  // Rewrites config
-  async rewrites() {
-    return {
-      beforeFiles: [],
-      afterFiles: [],
-      fallback: [],
-    }
   },
 }
 

@@ -7,6 +7,7 @@ import dbConnect from "@/lib/dbConnect"
 import Donation from "@/models/Donation"
 import { verifyApiKey } from "@/lib/api-auth"
 
+export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
@@ -101,3 +102,6 @@ export async function GET(req: NextRequest) {
     return handleApiError(error)
   }
 }
+
+const handler = { GET, POST }
+export default handler

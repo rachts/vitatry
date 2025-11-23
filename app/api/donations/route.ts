@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
     const donorAddress = formData.get("donorAddress")?.toString().trim()
     const notes = formData.get("notes")?.toString().trim()
 
-    // Validate required fields
     if (!medicineName || !brand || !dosage || !quantityStr || !expiryDateStr || !condition || !category) {
       return NextResponse.json({ success: false, error: "Missing required medicine fields" }, { status: 400 })
     }
@@ -36,13 +35,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing required donor information" }, { status: 400 })
     }
 
-    // Validate quantity
     const quantity = Number.parseInt(quantityStr)
     if (isNaN(quantity) || quantity <= 0) {
       return NextResponse.json({ success: false, error: "Quantity must be a positive number" }, { status: 400 })
     }
 
-    // Validate expiry date
     const expiryDate = new Date(expiryDateStr)
     if (isNaN(expiryDate.getTime())) {
       return NextResponse.json({ success: false, error: "Invalid expiry date" }, { status: 400 })
@@ -52,13 +49,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Medicine has already expired" }, { status: 400 })
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(donorEmail)) {
       return NextResponse.json({ success: false, error: "Invalid email format" }, { status: 400 })
     }
 
-    // Upload images
     const images: string[] = []
     const imageFiles = formData.getAll("images") as File[]
 
@@ -77,7 +72,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create donation record
     const donationId = `DON-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
     const donation = await Donation.create({

@@ -6,26 +6,21 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     await dbConnect()
 
-    const { searchParams } = new URL(req.url)
-    const category = searchParams.get("category")
-    const available = searchParams.get("available")
-    const limit = Math.min(Number.parseInt(searchParams.get("limit") || "50"), 100)
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get("status") || "verified"
+    const limit = Math.min(Number.parseInt(searchParams.get("limit") || "20"), 100)
     const page = Math.max(Number.parseInt(searchParams.get("page") || "1"), 1)
 
-    const query: any = { status: "verified" }
-    if (category) {
-      query.category = category
-    }
-    if (available === "true") {
-      query.isReserved = false
+    const query: Record<string, any> = {
+      status: status,
+      isReserved: false,
     }
 
     const skip = (page - 1) * limit
-
     const [medicines, total] = await Promise.all([
       Donation.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Donation.countDocuments(query),
@@ -46,6 +41,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("Error fetching medicines:", error)
-    return NextResponse.json({ success: false, error: error.message || "Failed to fetch medicines" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Failed to fetch medicines" }, { status: 500 })
   }
 }

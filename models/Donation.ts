@@ -19,18 +19,13 @@ export interface IDonation extends Document {
   status: "pending" | "verified" | "rejected" | "distributed"
   isReserved: boolean
   reservedBy?: string
-  aiVerification?: {
-    verified: boolean
-    confidence: number
-    notes: string
-  }
   createdAt: Date
   updatedAt: Date
 }
 
 const DonationSchema = new Schema<IDonation>(
   {
-    donationId: { type: String, required: true, unique: true, index: true },
+    donationId: { type: String, required: true, unique: true },
     medicineName: { type: String, required: true },
     brand: { type: String, required: true },
     genericName: String,
@@ -48,18 +43,13 @@ const DonationSchema = new Schema<IDonation>(
     status: { type: String, enum: ["pending", "verified", "rejected", "distributed"], default: "pending" },
     isReserved: { type: Boolean, default: false },
     reservedBy: String,
-    aiVerification: {
-      verified: Boolean,
-      confidence: Number,
-      notes: String,
-    },
   },
   { timestamps: true },
 )
 
-// Create indexes
 DonationSchema.index({ status: 1, createdAt: -1 })
 DonationSchema.index({ donationId: 1 }, { unique: true })
 DonationSchema.index({ category: 1 })
+DonationSchema.index({ donorEmail: 1 })
 
 export default mongoose.models.Donation || mongoose.model<IDonation>("Donation", DonationSchema)
