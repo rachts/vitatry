@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import anime from "animejs/lib/anime.es.js"
 
 interface AnimatedCounterProps {
   value: number | string
@@ -20,6 +19,7 @@ export function AnimatedCounter({
 }: AnimatedCounterProps) {
   const counterRef = useRef<HTMLSpanElement>(null)
   const [hasAnimated, setHasAnimated] = useState(false)
+  const [displayValue, setDisplayValue] = useState(`${prefix}0${suffix}`)
 
   useEffect(() => {
     const element = counterRef.current
@@ -36,23 +36,27 @@ export function AnimatedCounter({
             const numericValue = typeof value === "string" ? Number.parseInt(value.replace(/[^0-9]/g, "")) : value
 
             if (prefersReducedMotion) {
-              element.textContent = `${prefix}${value}${suffix}`
+              setDisplayValue(`${prefix}${value}${suffix}`)
               return
             }
 
-            anime({
-              targets: { count: 0 },
-              count: numericValue,
-              duration,
-              easing: "easeOutExpo",
-              round: 1,
-              update: (anim) => {
-                const current = Math.round(anim.animations[0].currentValue as number)
-                element.textContent = `${prefix}${current.toLocaleString()}${suffix}`
-              },
-              complete: () => {
-                element.textContent = `${prefix}${value}${suffix}`
-              },
+            import("animejs/lib/anime.es.js").then((animeModule) => {
+              const anime = animeModule.default
+
+              anime({
+                targets: { count: 0 },
+                count: numericValue,
+                duration,
+                easing: "easeOutExpo",
+                round: 1,
+                update: (anim) => {
+                  const current = Math.round(anim.animations[0].currentValue as number)
+                  setDisplayValue(`${prefix}${current.toLocaleString()}${suffix}`)
+                },
+                complete: () => {
+                  setDisplayValue(`${prefix}${value}${suffix}`)
+                },
+              })
             })
           }
         })
@@ -66,7 +70,7 @@ export function AnimatedCounter({
 
   return (
     <span ref={counterRef} className={className}>
-      {prefix}0{suffix}
+      {displayValue}
     </span>
   )
 }

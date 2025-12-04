@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, type ReactNode } from "react"
+import { useEffect, useRef, type ReactNode, memo } from "react"
 
 interface ParallaxSectionProps {
   children: ReactNode
@@ -8,7 +8,11 @@ interface ParallaxSectionProps {
   className?: string
 }
 
-export function ParallaxSection({ children, speed = 0.5, className = "" }: ParallaxSectionProps) {
+export const ParallaxSection = memo(function ParallaxSection({
+  children,
+  speed = 0.5,
+  className = "",
+}: ParallaxSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -17,22 +21,27 @@ export function ParallaxSection({ children, speed = 0.5, className = "" }: Paral
     if (prefersReducedMotion) return
 
     let rafId: number
+    let ticking = false
 
     const handleScroll = () => {
-      rafId = requestAnimationFrame(() => {
-        if (!sectionRef.current || !contentRef.current) return
+      if (!ticking) {
+        rafId = requestAnimationFrame(() => {
+          if (!sectionRef.current || !contentRef.current) return
 
-        const rect = sectionRef.current.getBoundingClientRect()
-        const windowHeight = window.innerHeight
+          const rect = sectionRef.current.getBoundingClientRect()
+          const windowHeight = window.innerHeight
 
-        // Only animate when in viewport
-        if (rect.top < windowHeight && rect.bottom > 0) {
-          const scrollProgress = (windowHeight - rect.top) / (windowHeight + rect.height)
-          const translateY = (scrollProgress - 0.5) * speed * 100
+          // Only animate when in viewport
+          if (rect.top < windowHeight && rect.bottom > 0) {
+            const scrollProgress = (windowHeight - rect.top) / (windowHeight + rect.height)
+            const translateY = (scrollProgress - 0.5) * speed * 100
 
-          contentRef.current.style.transform = `translateY(${translateY}px)`
-        }
-      })
+            contentRef.current.style.transform = `translateY(${translateY}px)`
+          }
+          ticking = false
+        })
+        ticking = true
+      }
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
@@ -51,4 +60,4 @@ export function ParallaxSection({ children, speed = 0.5, className = "" }: Paral
       </div>
     </div>
   )
-}
+})

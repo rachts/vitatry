@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useRef, type ReactNode, useCallback } from "react"
+import { useRef, type ReactNode, useCallback, memo } from "react"
 
 interface TiltCardProps {
   children: ReactNode
@@ -10,7 +9,7 @@ interface TiltCardProps {
   tiltAmount?: number
 }
 
-export function TiltCard({ children, className = "", tiltAmount = 10 }: TiltCardProps) {
+export const TiltCard = memo(function TiltCard({ children, className = "", tiltAmount = 10 }: TiltCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
 
   const handleMouseMove = useCallback(
@@ -41,7 +40,7 @@ export function TiltCard({ children, className = "", tiltAmount = 10 }: TiltCard
   return (
     <div
       ref={cardRef}
-      className={`transition-transform duration-200 ease-out ${className}`}
+      className={`transition-transform duration-200 ease-out will-change-transform ${className}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{ transformStyle: "preserve-3d" }}
@@ -49,4 +48,4 @@ export function TiltCard({ children, className = "", tiltAmount = 10 }: TiltCard
       {children}
     </div>
   )
-}
+})

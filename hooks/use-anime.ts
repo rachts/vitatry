@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useCallback } from "react"
-import anime from "animejs"
+import anime from "animejs/lib/anime.es.js"
 
 export function useAnime() {
   const prefersReducedMotion = useRef(false)

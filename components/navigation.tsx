@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import ThemeToggle from "@/components/theme-toggle"
 import { useEffect, useRef, useState } from "react"
-import anime from "animejs/lib/anime.es.js"
 import { Menu, X } from "lucide-react"
 
 export default function Navigation() {
@@ -12,8 +12,11 @@ export default function Navigation() {
   const actionsRef = useRef<HTMLDivElement>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 20)
     }
@@ -23,6 +26,8 @@ export default function Navigation() {
   }, [])
 
   useEffect(() => {
+    if (!mounted) return
+
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) {
       // Show all elements without animation
@@ -32,42 +37,46 @@ export default function Navigation() {
       return
     }
 
-    const tl = anime.timeline({
-      easing: "easeOutCubic",
-    })
+    import("animejs/lib/anime.es.js").then((animeModule) => {
+      const anime = animeModule.default
 
-    tl.add({
-      targets: logoRef.current,
-      opacity: [0, 1],
-      translateX: [-10, 0],
-      duration: 500,
-    })
+      const tl = anime.timeline({
+        easing: "easeOutCubic",
+      })
 
-    tl.add(
-      {
-        targets: navLinksRef.current?.querySelectorAll("a"),
+      tl.add({
+        targets: logoRef.current,
         opacity: [0, 1],
-        translateY: [-8, 0],
-        duration: 400,
-        delay: anime.stagger(60),
-      },
-      "-=300",
-    )
+        translateX: [-10, 0],
+        duration: 500,
+      })
 
-    tl.add(
-      {
-        targets: actionsRef.current,
-        opacity: [0, 1],
-        translateX: [10, 0],
-        duration: 400,
-      },
-      "-=200",
-    )
-  }, [])
+      tl.add(
+        {
+          targets: navLinksRef.current?.querySelectorAll("a"),
+          opacity: [0, 1],
+          translateY: [-8, 0],
+          duration: 400,
+          delay: anime.stagger(60),
+        },
+        "-=300",
+      )
+
+      tl.add(
+        {
+          targets: actionsRef.current,
+          opacity: [0, 1],
+          translateX: [10, 0],
+          duration: 400,
+        },
+        "-=200",
+      )
+    })
+  }, [mounted])
 
   return (
     <header
-      className={`w-full sticky top-0 z-50 transition-all duration-300 ${
+      className={`w-full sticky top-0 z-50 transition-all duration-300 h-16 ${
         scrolled ? "bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg shadow-lg" : "bg-white dark:bg-slate-900"
       } border-b border-gray-200/50 dark:border-slate-800/50`}
     >
@@ -77,25 +86,27 @@ export default function Navigation() {
           href="/"
           className="flex items-center gap-2 group"
           aria-label="VitaMend Home"
-          style={{ opacity: 0 }}
+          style={{ opacity: mounted ? undefined : 1 }}
         >
-          <img
+          <Image
             src="/images/design-mode/VITAMEND_LOGO.png"
             alt="VitaMend logo"
-            className="h-8 w-8 rounded transition-transform duration-300 group-hover:scale-110"
-            loading="eager"
+            width={32}
+            height={32}
+            className="rounded transition-transform duration-300 group-hover:scale-110"
+            priority
           />
           <span className="text-base font-semibold text-slate-900 dark:text-white">VitaMend</span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav ref={navLinksRef} className="hidden md:flex items-center gap-8" aria-label="Primary">
+        <nav ref={navLinksRef} className="hidden md:flex items-center gap-8" aria-label="Primary navigation">
           {["Donate", "Volunteer", "Transparency", "Founders"].map((item) => (
             <Link
               key={item}
               href={`/${item.toLowerCase()}`}
               className="relative text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors link-underline"
-              style={{ opacity: 0 }}
+              style={{ opacity: mounted ? undefined : 1 }}
             >
               {item}
             </Link>
@@ -103,7 +114,7 @@ export default function Navigation() {
         </nav>
 
         {/* Actions */}
-        <div ref={actionsRef} className="flex items-center gap-4" style={{ opacity: 0 }}>
+        <div ref={actionsRef} className="flex items-center gap-4" style={{ opacity: mounted ? undefined : 1 }}>
           <ThemeToggle />
           <Link
             href="/dashboard"
@@ -116,16 +127,24 @@ export default function Navigation() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-            aria-label="Toggle menu"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" aria-hidden="true" />
+            ) : (
+              <Menu className="h-6 w-6" aria-hidden="true" />
+            )}
           </button>
         </div>
       </div>
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-4 px-4 space-y-3 animate-fade-in-up">
+        <nav
+          className="md:hidden bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-4 px-4 space-y-3 animate-fade-in-up"
+          aria-label="Mobile navigation"
+        >
           {["Donate", "Volunteer", "Transparency", "Founders", "Dashboard"].map((item) => (
             <Link
               key={item}
@@ -136,7 +155,7 @@ export default function Navigation() {
               {item}
             </Link>
           ))}
-        </div>
+        </nav>
       )}
     </header>
   )
