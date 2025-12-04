@@ -10,6 +10,10 @@ import User from "@/models/User"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
 
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),

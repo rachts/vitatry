@@ -3,6 +3,10 @@ import bcrypt from "bcryptjs"
 import dbConnect from "@/lib/dbConnect"
 import User from "@/models/User"
 
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function POST(req: Request) {
   await dbConnect()
 
