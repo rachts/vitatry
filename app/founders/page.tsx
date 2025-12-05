@@ -5,7 +5,7 @@ import { Facebook, Twitter, Instagram } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useRef, memo } from "react"
-import anime from "animejs/lib/anime.es.js"
+import anime from "animejs"
 import { TiltCard } from "@/components/tilt-card"
 
 const founders = [

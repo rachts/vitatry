@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react"
 import { MessageCircle, Send, Smile, Paperclip, Minus, Copy, ThumbsUp, ThumbsDown } from "lucide-react"
 import dynamic from "next/dynamic"
-import anime from "animejs/lib/anime.es.js"
+import anime from "animejs"
 
 interface Message {
   id: string

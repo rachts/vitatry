@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, type ReactNode } from "react"
-import anime from "animejs/lib/anime.es.js"
+import anime from "animejs"
 
 interface AnimatedSectionProps {
   children: ReactNode

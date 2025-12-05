@@ -7,8 +7,7 @@ export default function HeroAnimations() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) return
 
-    // Dynamically import anime.js only on client
-    import("animejs/lib/anime.es.js").then((animeModule) => {
+    import("animejs").then((animeModule) => {
       const anime = animeModule.default
 
       const tl = anime.timeline({

@@ -37,7 +37,7 @@ export default function Navigation() {
       return
     }
 
-    import("animejs/lib/anime.es.js").then((animeModule) => {
+    import("animejs").then((animeModule) => {
       const anime = animeModule.default
 
       const tl = anime.timeline({

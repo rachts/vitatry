@@ -40,7 +40,7 @@ export function AnimatedCounter({
               return
             }
 
-            import("animejs/lib/anime.es.js").then((animeModule) => {
+            import("animejs").then((animeModule) => {
               const anime = animeModule.default
 
               anime({
