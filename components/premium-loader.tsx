@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import anime from "animejs"
 
 export function PremiumLoader() {
   const [isVisible, setIsVisible] = useState(true)
@@ -18,46 +17,50 @@ export function PremiumLoader() {
       return
     }
 
-    // Logo pulse animation
-    anime({
-      targets: logoRef.current,
-      scale: [0.8, 1, 0.8],
-      opacity: [0.5, 1, 0.5],
-      duration: 1500,
-      easing: "easeInOutSine",
-      loop: true,
-    })
+    import("animejs").then((animeModule) => {
+      const anime = animeModule.default
 
-    // Progress bar animation
-    anime({
-      targets: progressRef.current,
-      width: ["0%", "100%"],
-      duration: 2000,
-      easing: "easeInOutQuad",
-    })
-
-    // Text fade
-    anime({
-      targets: textRef.current,
-      opacity: [0, 1],
-      translateY: [10, 0],
-      duration: 600,
-      delay: 300,
-      easing: "easeOutCubic",
-    })
-
-    // Fade out loader after content is ready
-    const timer = setTimeout(() => {
+      // Logo pulse animation
       anime({
-        targets: loaderRef.current,
-        opacity: [1, 0],
-        duration: 500,
-        easing: "easeInQuad",
-        complete: () => setIsVisible(false),
+        targets: logoRef.current,
+        scale: [0.8, 1, 0.8],
+        opacity: [0.5, 1, 0.5],
+        duration: 1500,
+        easing: "easeInOutSine",
+        loop: true,
       })
-    }, 2200)
 
-    return () => clearTimeout(timer)
+      // Progress bar animation
+      anime({
+        targets: progressRef.current,
+        width: ["0%", "100%"],
+        duration: 2000,
+        easing: "easeInOutQuad",
+      })
+
+      // Text fade
+      anime({
+        targets: textRef.current,
+        opacity: [0, 1],
+        translateY: [10, 0],
+        duration: 600,
+        delay: 300,
+        easing: "easeOutCubic",
+      })
+
+      // Fade out loader after content is ready
+      const timer = setTimeout(() => {
+        anime({
+          targets: loaderRef.current,
+          opacity: [1, 0],
+          duration: 500,
+          easing: "easeInQuad",
+          complete: () => setIsVisible(false),
+        })
+      }, 2200)
+
+      return () => clearTimeout(timer)
+    })
   }, [])
 
   if (!isVisible) return null

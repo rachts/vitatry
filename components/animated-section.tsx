@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, type ReactNode } from "react"
-import anime from "animejs"
 
 interface AnimatedSectionProps {
   children: ReactNode
@@ -44,20 +43,24 @@ export function AnimatedSection({ children, className = "", delay = 0, animation
           if (entry.isIntersecting && !hasAnimated.current) {
             hasAnimated.current = true
 
-            const animationConfigs: Record<string, anime.AnimeParams> = {
-              fadeUp: { opacity: [0, 1], translateY: [30, 0] },
-              fadeIn: { opacity: [0, 1] },
-              scaleIn: { opacity: [0, 1], scale: [0.95, 1] },
-              slideLeft: { opacity: [0, 1], translateX: [-30, 0] },
-              slideRight: { opacity: [0, 1], translateX: [30, 0] },
-            }
+            import("animejs").then((animeModule) => {
+              const anime = animeModule.default
 
-            anime({
-              targets: element,
-              ...animationConfigs[animation],
-              duration: 600,
-              delay,
-              easing: "easeOutCubic",
+              const animationConfigs: Record<string, object> = {
+                fadeUp: { opacity: [0, 1], translateY: [30, 0] },
+                fadeIn: { opacity: [0, 1] },
+                scaleIn: { opacity: [0, 1], scale: [0.95, 1] },
+                slideLeft: { opacity: [0, 1], translateX: [-30, 0] },
+                slideRight: { opacity: [0, 1], translateX: [30, 0] },
+              }
+
+              anime({
+                targets: element,
+                ...animationConfigs[animation],
+                duration: 600,
+                delay,
+                easing: "easeOutCubic",
+              })
             })
           }
         })

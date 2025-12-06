@@ -5,7 +5,6 @@ import { Facebook, Twitter, Instagram } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useEffect, useRef, memo } from "react"
-import anime from "animejs"
 import { TiltCard } from "@/components/tilt-card"
 
 const founders = [
@@ -151,48 +150,50 @@ export default function FoundersPage() {
       return
     }
 
-    const tl = anime.timeline({
-      easing: "easeOutCubic",
-    })
+    const anime = import("animejs").then(({ default: anime }) => {
+      const tl = anime.timeline({
+        easing: "easeOutCubic",
+      })
 
-    tl.add({
-      targets: titleRef.current,
-      opacity: [0, 1],
-      translateY: [20, 0],
-      duration: 600,
-    })
-
-    tl.add(
-      {
-        targets: "[data-founder-card]",
-        opacity: [0, 1],
-        translateY: [30, 0],
-        duration: 700,
-        delay: anime.stagger(100),
-      },
-      "-=300",
-    )
-
-    tl.add(
-      {
-        targets: "[data-founder-image]",
-        scale: [0.9, 1],
-        duration: 500,
-        delay: anime.stagger(100),
-        easing: "easeOutBack",
-      },
-      "-=500",
-    )
-
-    tl.add(
-      {
-        targets: missionRef.current,
+      tl.add({
+        targets: titleRef.current,
         opacity: [0, 1],
         translateY: [20, 0],
         duration: 600,
-      },
-      "-=200",
-    )
+      })
+
+      tl.add(
+        {
+          targets: "[data-founder-card]",
+          opacity: [0, 1],
+          translateY: [30, 0],
+          duration: 700,
+          delay: anime.stagger(100),
+        },
+        "-=300",
+      )
+
+      tl.add(
+        {
+          targets: "[data-founder-image]",
+          scale: [0.9, 1],
+          duration: 500,
+          delay: anime.stagger(100),
+          easing: "easeOutBack",
+        },
+        "-=500",
+      )
+
+      tl.add(
+        {
+          targets: missionRef.current,
+          opacity: [0, 1],
+          translateY: [20, 0],
+          duration: 600,
+        },
+        "-=200",
+      )
+    })
   }, [])
 
   return (

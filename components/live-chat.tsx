@@ -4,7 +4,6 @@ import type React from "react"
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react"
 import { MessageCircle, Send, Smile, Paperclip, Minus, Copy, ThumbsUp, ThumbsDown } from "lucide-react"
 import dynamic from "next/dynamic"
-import anime from "animejs"
 
 interface Message {
   id: string
@@ -47,12 +46,15 @@ const MessageBubble = memo(function MessageBubble({
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
       if (prefersReducedMotion) return
 
-      anime({
-        targets: bubbleRef.current,
-        opacity: [0, 1],
-        translateY: [10, 0],
-        duration: 300,
-        easing: "easeOutCubic",
+      import("animejs").then((animeModule) => {
+        const anime = animeModule.default
+        anime({
+          targets: bubbleRef.current,
+          opacity: [0, 1],
+          translateY: [10, 0],
+          duration: 300,
+          easing: "easeOutCubic",
+        })
       })
     }
   }, [isNew])
@@ -178,38 +180,44 @@ function LiveChatComponent() {
     if (!isOpen) {
       setIsOpen(true)
       if (!prefersReducedMotion && chatWindowRef.current && fabRef.current) {
-        anime({
-          targets: fabRef.current,
-          scale: [1, 0],
-          opacity: [1, 0],
-          duration: 200,
-          easing: "easeInCubic",
-        })
-        anime({
-          targets: chatWindowRef.current,
-          scale: [0.95, 1],
-          opacity: [0, 1],
-          duration: 350,
-          easing: "easeOutBack",
+        import("animejs").then((animeModule) => {
+          const anime = animeModule.default
+          anime({
+            targets: fabRef.current,
+            scale: [1, 0],
+            opacity: [1, 0],
+            duration: 200,
+            easing: "easeInCubic",
+          })
+          anime({
+            targets: chatWindowRef.current,
+            scale: [0.95, 1],
+            opacity: [0, 1],
+            duration: 350,
+            easing: "easeOutBack",
+          })
         })
       }
     } else {
       if (!prefersReducedMotion && chatWindowRef.current && fabRef.current) {
-        anime({
-          targets: chatWindowRef.current,
-          scale: [1, 0.95],
-          opacity: [1, 0],
-          duration: 250,
-          easing: "easeInCubic",
-          complete: () => setIsOpen(false),
-        })
-        anime({
-          targets: fabRef.current,
-          scale: [0, 1],
-          opacity: [0, 1],
-          duration: 250,
-          delay: 100,
-          easing: "easeOutBack",
+        import("animejs").then((animeModule) => {
+          const anime = animeModule.default
+          anime({
+            targets: chatWindowRef.current,
+            scale: [1, 0.95],
+            opacity: [1, 0],
+            duration: 250,
+            easing: "easeInCubic",
+            complete: () => setIsOpen(false),
+          })
+          anime({
+            targets: fabRef.current,
+            scale: [0, 1],
+            opacity: [0, 1],
+            duration: 250,
+            delay: 100,
+            easing: "easeOutBack",
+          })
         })
       } else {
         setIsOpen(false)
