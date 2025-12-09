@@ -1,163 +1,108 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Shield, Eye, FileText, Users } from "lucide-react"
+import { Shield, Eye, FileText, Users, Package } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function TransparencyPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-6">Transparency Report</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            We believe in complete transparency. Track how donations are processed, verified, and distributed to ensure
-            maximum impact and accountability.
+        <div className="text-center mb-12 animate-fade-in-up">
+          <h1 className="text-4xl font-bold mb-6 text-slate-900 dark:text-white">Transparency Report</h1>
+          <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
+            We believe in complete transparency. Track how donations are processed, verified, and distributed.
           </p>
         </div>
 
-        {/* Key Metrics */}
-        <div className="grid md:grid-cols-4 gap-6 mb-12">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Donations</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">12,847</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Verified Medicines</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">11,203</div>
-              <p className="text-xs text-muted-foreground">87.2% approval rate</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Distributed</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">10,891</div>
-              <p className="text-xs text-muted-foreground">97.2% distribution rate</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active NGOs</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">47</div>
-              <p className="text-xs text-muted-foreground">Partner organizations</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
+          {[
+            { title: "Total Donations", value: 0, subtitle: "Be the first to donate", icon: FileText },
+            { title: "Verified Medicines", value: 0, subtitle: "Pending verifications", icon: Shield },
+            { title: "Distributed", value: 0, subtitle: "Ready to distribute", icon: Users },
+            { title: "Active NGOs", value: 0, subtitle: "Onboarding partners", icon: Eye },
+          ].map((stat, idx) => (
+            <Card
+              key={stat.title}
+              className="transition-smooth hover-lift animate-fade-in-up"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">{stat.title}</CardTitle>
+                <stat.icon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Process Transparency */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          <Card>
+        {/* Process Transparency - Responsive grid */}
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8 mb-12">
+          <Card className="transition-smooth hover-lift animate-fade-in-up" style={{ animationDelay: "400ms" }}>
             <CardHeader>
               <CardTitle>Verification Process</CardTitle>
               <CardDescription>How we ensure medicine safety and quality</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span>AI Initial Screening</span>
-                <Badge variant="secondary">Automated</Badge>
-              </div>
-              <Progress value={100} className="h-2" />
-
-              <div className="flex justify-between items-center">
-                <span>Pharmacist Review</span>
-                <Badge variant="secondary">Manual</Badge>
-              </div>
-              <Progress value={87} className="h-2" />
-
-              <div className="flex justify-between items-center">
-                <span>Quality Assurance</span>
-                <Badge variant="secondary">Final Check</Badge>
-              </div>
-              <Progress value={97} className="h-2" />
+              {[
+                { label: "AI Initial Screening", badge: "Automated" },
+                { label: "Pharmacist Review", badge: "Manual" },
+                { label: "Quality Assurance", badge: "Final Check" },
+              ].map((item) => (
+                <div key={item.label}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-slate-700 dark:text-slate-300">{item.label}</span>
+                    <Badge variant="secondary">{item.badge}</Badge>
+                  </div>
+                  <Progress value={0} className="h-2" />
+                </div>
+              ))}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-smooth hover-lift animate-fade-in-up" style={{ animationDelay: "500ms" }}>
             <CardHeader>
               <CardTitle>Distribution Timeline</CardTitle>
               <CardDescription>Average time from donation to distribution</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span>Collection</span>
-                <span className="text-sm text-muted-foreground">1-2 days</span>
-              </div>
-              <Progress value={100} className="h-2" />
-
-              <div className="flex justify-between items-center">
-                <span>Verification</span>
-                <span className="text-sm text-muted-foreground">2-3 days</span>
-              </div>
-              <Progress value={75} className="h-2" />
-
-              <div className="flex justify-between items-center">
-                <span>Distribution</span>
-                <span className="text-sm text-muted-foreground">1-2 days</span>
-              </div>
-              <Progress value={90} className="h-2" />
+              {[
+                { label: "Collection", time: "1-2 days" },
+                { label: "Verification", time: "2-3 days" },
+                { label: "Distribution", time: "1-2 days" },
+              ].map((item) => (
+                <div key={item.label}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-slate-700 dark:text-slate-300">{item.label}</span>
+                    <span className="text-sm text-muted-foreground">{item.time}</span>
+                  </div>
+                  <Progress value={0} className="h-2" />
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Activity */}
-        <Card>
+        {/* Recent Activity - Enhanced empty state */}
+        <Card className="transition-smooth hover-lift animate-fade-in-up" style={{ animationDelay: "600ms" }}>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Latest donations and distributions</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[
-                { action: "Medicine Verified", item: "Paracetamol 500mg x50", time: "2 hours ago", status: "approved" },
-                {
-                  action: "Distribution Complete",
-                  item: "Antibiotics to City Hospital NGO",
-                  time: "4 hours ago",
-                  status: "completed",
-                },
-                { action: "New Donation", item: "Diabetes medications", time: "6 hours ago", status: "pending" },
-                {
-                  action: "Quality Check",
-                  item: "Blood pressure medications",
-                  time: "8 hours ago",
-                  status: "in-progress",
-                },
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">{activity.item}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge
-                      variant={
-                        activity.status === "approved" || activity.status === "completed" ? "default" : "secondary"
-                      }
-                    >
-                      {activity.status}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2 text-slate-700 dark:text-slate-300">No Activity Yet</h3>
+              <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+                Activity will appear here once donations start flowing through the platform.
+              </p>
+              <Button asChild className="bg-emerald-600 hover:bg-emerald-700 transition-smooth hover-lift">
+                <Link href="/donate">Make First Donation</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,7 +33,7 @@ export default function ApiKeysPage() {
     }
   }, [session])
 
-  const fetchApiKeys = async () => {
+  const fetchApiKeys = useCallback(async () => {
     try {
       const response = await fetch("/api/user/api-keys")
       const data = await response.json()
@@ -48,9 +48,9 @@ export default function ApiKeysPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
-  const createApiKey = async () => {
+  const createApiKey = useCallback(async () => {
     if (!newKeyName.trim()) {
       toast({
         title: "Error",
@@ -98,32 +98,35 @@ export default function ApiKeysPage() {
     } finally {
       setIsCreating(false)
     }
-  }
+  }, [apiKeys, newKeyName, toast])
 
-  const deleteApiKey = async (id: string) => {
-    try {
-      const response = await fetch(`/api/user/api-keys/${id}`, {
-        method: "DELETE",
-      })
-
-      if (response.ok) {
-        setApiKeys(apiKeys.filter((key) => key.id !== id))
-        toast({
-          title: "Success",
-          description: "API key deleted successfully",
+  const deleteApiKey = useCallback(
+    async (id: string) => {
+      try {
+        const response = await fetch(`/api/user/api-keys/${id}`, {
+          method: "DELETE",
         })
-      } else {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to delete API key")
+
+        if (response.ok) {
+          setApiKeys(apiKeys.filter((key) => key.id !== id))
+          toast({
+            title: "Success",
+            description: "API key deleted successfully",
+          })
+        } else {
+          const error = await response.json()
+          throw new Error(error.error || "Failed to delete API key")
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "An unexpected error occurred",
+          variant: "destructive",
+        })
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      })
-    }
-  }
+    },
+    [apiKeys, toast],
+  )
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)

@@ -78,10 +78,10 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f8faf8] to-[#f8faff] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md transition-all duration-300 hover:shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl text-center text-[#1a472a] flex items-center justify-center gap-3">
+          <CardTitle className="text-2xl text-center text-primary flex items-center justify-center gap-3">
             <img src="/logo.png" alt="VitaMend Logo" className="h-8 w-8" />
             Join VitaMend
           </CardTitle>
@@ -95,6 +95,7 @@ export default function SignUp() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
+                className="transition-all duration-200 focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
             <div className="space-y-2">
@@ -105,12 +106,13 @@ export default function SignUp() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+                className="transition-all duration-200 focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">I want to</Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                <SelectTrigger>
+                <SelectTrigger className="transition-all duration-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -127,6 +129,7 @@ export default function SignUp() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
+                className="transition-all duration-200 focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
             <div className="space-y-2">
@@ -137,16 +140,21 @@ export default function SignUp() {
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 required
+                className="transition-all duration-200 focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
-            <Button type="submit" className="w-full bg-[#2ea043] hover:bg-[#2ea043]/90" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 transition-all duration-200"
+              disabled={isLoading}
+            >
               {isLoading ? "Creating account..." : "Create Account"}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-4">
             Already have an account?{" "}
-            <Link href="/auth/signin" className="text-[#2ea043] hover:underline">
+            <Link href="/auth/signin" className="text-emerald-600 hover:underline transition-colors">
               Sign in
             </Link>
           </p>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -45,7 +45,7 @@ export default function NGODashboard() {
     }
   }, [session])
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [requestsRes, medicinesRes] = await Promise.all([
         fetch("/api/ngo/requests"),
@@ -67,7 +67,7 @@ export default function NGODashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   const submitRequest = async (formData: FormData) => {
     try {

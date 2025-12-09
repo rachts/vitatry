@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "./cart-provider"
 import { toast } from "sonner"
-import { ShoppingCart, Heart, Star } from "lucide-react"
+import { ShoppingCart, Heart, Star, Package } from "lucide-react"
 
 interface Product {
   _id: string
@@ -82,19 +83,16 @@ export default function ProductGrid({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {Array.from({ length: 8 }).map((_, i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i} className="animate-pulse">
-            <CardHeader>
-              <div className="w-full h-48 bg-gray-200 rounded-md"></div>
+            <CardHeader className="p-0">
+              <div className="w-full h-48 bg-slate-200 dark:bg-slate-700 rounded-t-lg"></div>
             </CardHeader>
-            <CardContent>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            <CardContent className="p-4">
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
             </CardContent>
-            <CardFooter>
-              <div className="h-10 bg-gray-200 rounded w-full"></div>
-            </CardFooter>
           </Card>
         ))}
       </div>
@@ -104,25 +102,37 @@ export default function ProductGrid({
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600 mb-4">{error}</p>
-        <Button onClick={fetchProducts}>Try Again</Button>
+        <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+        <Button onClick={fetchProducts} className="transition-smooth hover-scale">
+          Try Again
+        </Button>
       </div>
     )
   }
 
   if (filteredProducts.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600 mb-4">No products found matching your criteria.</p>
-        <Button onClick={() => window.location.reload()}>Reset Filters</Button>
+      <div className="text-center py-16 animate-fade-in-up">
+        <Package className="h-16 w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold mb-2 text-slate-700 dark:text-slate-300">No Products Available</h3>
+        <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+          Our shop inventory is currently empty. Products will appear here once medicines are verified and listed.
+        </p>
+        <Button asChild className="bg-emerald-600 hover:bg-emerald-700 transition-smooth hover-lift">
+          <Link href="/donate">Donate Medicines</Link>
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {filteredProducts.map((product) => (
-        <Card key={product._id} className="group hover:shadow-lg transition-shadow duration-200">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+      {filteredProducts.map((product, idx) => (
+        <Card
+          key={product._id}
+          className="group transition-smooth hover-lift dark:border-slate-700 animate-fade-in-up"
+          style={{ animationDelay: `${idx * 50}ms` }}
+        >
           <CardHeader className="p-0">
             <div className="relative overflow-hidden rounded-t-lg">
               <Image
@@ -130,7 +140,7 @@ export default function ProductGrid({
                 alt={product.name}
                 width={300}
                 height={200}
-                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
               />
               {product.inStock < 10 && product.inStock > 0 && (
                 <Badge className="absolute top-2 left-2 bg-orange-500">Low Stock</Badge>
@@ -139,7 +149,7 @@ export default function ProductGrid({
               <Button
                 size="sm"
                 variant="secondary"
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
               >
                 <Heart className="h-4 w-4" />
               </Button>
@@ -148,7 +158,9 @@ export default function ProductGrid({
 
           <CardContent className="p-4">
             <CardTitle className="text-lg mb-2 line-clamp-1">{product.name}</CardTitle>
-            <CardDescription className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</CardDescription>
+            <CardDescription className="text-sm text-gray-600 dark:text-slate-400 mb-3 line-clamp-2">
+              {product.description}
+            </CardDescription>
 
             <div className="flex items-center gap-2 mb-3">
               <div className="flex items-center">
@@ -161,11 +173,11 @@ export default function ProductGrid({
                   />
                 ))}
               </div>
-              <span className="text-sm text-gray-600">({product.reviews} reviews)</span>
+              <span className="text-sm text-gray-600 dark:text-slate-400">({product.reviews})</span>
             </div>
 
             <div className="flex flex-wrap gap-1 mb-3">
-              {product.tags.slice(0, 2).map((tag) => (
+              {product.tags?.slice(0, 2).map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-xs">
                   {tag}
                 </Badge>
@@ -173,13 +185,17 @@ export default function ProductGrid({
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold text-green-600">${product.price.toFixed(2)}</div>
-              <div className="text-sm text-gray-500">{product.inStock} in stock</div>
+              <div className="text-2xl font-bold text-emerald-600">${product.price.toFixed(2)}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">{product.inStock} in stock</div>
             </div>
           </CardContent>
 
           <CardFooter className="p-4 pt-0">
-            <Button className="w-full" onClick={() => handleAddToCart(product)} disabled={product.inStock === 0}>
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 transition-colors duration-200"
+              onClick={() => handleAddToCart(product)}
+              disabled={product.inStock === 0}
+            >
               <ShoppingCart className="mr-2 h-4 w-4" />
               {product.inStock === 0 ? "Out of Stock" : "Add to Cart"}
             </Button>

@@ -40,10 +40,10 @@ const HeroAnimations = dynamic(() => import("@/components/hero-animations"), {
 
 // Stats data
 const stats = [
-  { label: "Donations", value: "1,248", suffix: "+" },
-  { label: "Verified", value: "1,102", suffix: "" },
-  { label: "Distributed", value: "18,420", suffix: " doses" },
-  { label: "NGO Partners", value: "32", suffix: "" },
+  { label: "Donations", value: "0", suffix: "" },
+  { label: "Verified", value: "0", suffix: "" },
+  { label: "Distributed", value: "0", suffix: "" },
+  { label: "NGO Partners", value: "0", suffix: "" },
 ]
 
 // How it works data

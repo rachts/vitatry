@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Critical CSS inlined - only essential animations */
+/* Critical CSS inlined - smooth animations */
 @keyframes float {
   0%,
   100% {
@@ -47,7 +47,50 @@
   }
 }
 
-/* Reduced animation set for better performance */
+/* Added smooth slide animations */
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -66,7 +109,24 @@
   }
 
   .animate-fade-in-up {
-    animation: fade-in-up 0.6s ease-out forwards;
+    animation: fade-in-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  /* New smooth animation utilities */
+  .animate-slide-in-left {
+    animation: slide-in-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
   }
 
   /* Thin scrollbar */
@@ -97,10 +157,65 @@
     width: 0;
     height: 2px;
     background: currentColor;
-    transition: width 0.3s ease;
+    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .link-underline:hover::after {
     width: 100%;
+  }
+
+  /* Smooth transition utilities */
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .transition-smooth-fast {
+    transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .transition-smooth-slow {
+    transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hover-lift {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+  }
+
+  .hover-scale {
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+
+  .hover-glow {
+    transition: box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  }
+
+  /* Additional responsive utilities */
+  .container-tight {
+    @apply max-w-5xl mx-auto px-4;
+  }
+
+  /* Consistent card styling */
+  .card-hover {
+    @apply transition-all duration-300 ease-out hover:shadow-lg hover:-translate-y-1;
+  }
+
+  /* Button press effect */
+  .btn-press {
+    @apply transition-transform duration-150 active:scale-95;
+  }
+
+  /* Focus ring utility */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900;
   }
 }
 
@@ -184,10 +299,21 @@
     @apply border-border;
   }
 
+  /* Enhanced body with smooth color transitions */
   body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Smooth transitions for all interactive elements */
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* Prevent CLS with explicit image dimensions */
@@ -201,6 +327,11 @@
     outline-offset: 2px;
   }
 
+  /* Smooth scroll behavior */
+  html {
+    scroll-behavior: smooth;
+  }
+
   /* Respect reduced motion preference */
   @media (prefers-reduced-motion: reduce) {
     *,
@@ -210,6 +341,10 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+
+    html {
+      scroll-behavior: auto;
     }
   }
 }
@@ -225,5 +360,41 @@
   }
   .input-glow:focus {
     @apply ring-2 ring-emerald-500/50 border-emerald-500;
+  }
+
+  /* Card hover effects */
+  .card-interactive {
+    @apply transition-all duration-300 ease-out;
+  }
+  .card-interactive:hover {
+    @apply shadow-lg -translate-y-1;
+  }
+
+  /* Button hover effects */
+  .btn-interactive {
+    @apply transition-all duration-200 ease-out;
+  }
+  .btn-interactive:hover {
+    @apply scale-[1.02];
+  }
+  .btn-interactive:active {
+    @apply scale-[0.98];
+  }
+
+  /* Consistent empty state styling */
+  .empty-state {
+    @apply text-center py-12 px-4;
+  }
+
+  .empty-state-icon {
+    @apply h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4;
+  }
+
+  .empty-state-title {
+    @apply text-lg font-semibold mb-2 text-slate-700 dark:text-slate-300;
+  }
+
+  .empty-state-desc {
+    @apply text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6;
   }
 }
