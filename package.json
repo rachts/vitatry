@@ -61,7 +61,7 @@
     "input-otp": "latest",
     "lucide-react": "^0.454.0",
     "mongoose": "latest",
-    "next": "15.1.6",
+    "next": "15.1.9",
     "next-auth": "latest",
     "next-themes": "latest",
     "node-mocks-http": "^1.17.2",
