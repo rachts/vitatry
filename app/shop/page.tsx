@@ -5,11 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProductGrid from "@/components/shop/product-grid"
-import { Search, Filter, Heart, Users, Building2, Truck } from "lucide-react"
-import Image from "next/image"
+import { Search, Filter, Users, Building2, Truck, Package } from "lucide-react"
+import Link from "next/link"
 
 const categories = [
   { value: "all", label: "All Categories" },
@@ -30,49 +29,21 @@ const priceRanges = [
 
 const ngoPartners = [
   {
-    name: "Doctors Without Borders",
-    logo: "/doctors-without-borders-logo.png",
-    description: "Providing medical aid where it's needed most",
-    impact: "2.3M people helped",
-    focus: "Emergency medical care",
-  },
-  {
-    name: "Partners In Health",
-    logo: "/partners-in-health-logo.png",
-    description: "Strengthening health systems worldwide",
-    impact: "15 countries served",
-    focus: "Community health",
-  },
-  {
-    name: "Red Cross",
-    logo: "/red-cross-logo.png",
-    description: "Humanitarian aid and disaster relief",
-    impact: "190 countries active",
-    focus: "Emergency response",
+    name: "Partner NGOs Coming Soon",
+    logo: "/ngo.jpg",
+    description: "We are onboarding verified NGO partners",
+    impact: "Join us",
+    focus: "Healthcare access",
   },
 ]
 
 const pharmacyPartners = [
   {
-    name: "MediCare Pharmacy",
-    logo: "/generic-pharmacy-logo.png",
-    locations: "500+ locations",
-    services: "24/7 Emergency supply",
-    specialty: "Chronic disease management",
-  },
-  {
-    name: "HealthFirst Pharmacy",
-    logo: "/generic-pharmacy-logo.png",
-    locations: "300+ locations",
-    services: "Home delivery",
-    specialty: "Pediatric medications",
-  },
-  {
-    name: "Community Care Pharmacy",
-    logo: "/generic-pharmacy-logo.png",
-    locations: "200+ locations",
-    services: "Senior discounts",
-    specialty: "Geriatric care",
+    name: "Pharmacy Partners Coming Soon",
+    logo: "/pharmacy-interior.png",
+    locations: "Coming soon",
+    services: "Medicine distribution",
+    specialty: "Community healthcare",
   },
 ]
 
@@ -90,25 +61,37 @@ export default function ShopPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">VitaMend Medicine Shop</h1>
-        <p className="text-lg text-gray-600 mb-6">
+      <div className="mb-8 animate-fade-in-up">
+        <h1 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white">VitaMend Medicine Shop</h1>
+        <p className="text-lg text-slate-600 dark:text-slate-400 mb-6">
           Access affordable medicines while supporting our donation network. Every purchase helps fund our mission.
         </p>
       </div>
 
       <Tabs defaultValue="shop" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="shop">Shop</TabsTrigger>
-          <TabsTrigger value="availability">Availability</TabsTrigger>
-          <TabsTrigger value="ngo-partners">NGO Partners</TabsTrigger>
-          <TabsTrigger value="pharmacy-network">Pharmacy Network</TabsTrigger>
-          <TabsTrigger value="medicine-journey">Medicine Journey</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 h-auto p-1">
+          <TabsTrigger value="shop" className="transition-smooth text-xs sm:text-sm">
+            Shop
+          </TabsTrigger>
+          <TabsTrigger value="availability" className="transition-smooth text-xs sm:text-sm">
+            Availability
+          </TabsTrigger>
+          <TabsTrigger value="ngo-partners" className="transition-smooth text-xs sm:text-sm">
+            NGO Partners
+          </TabsTrigger>
+          <TabsTrigger value="pharmacy-network" className="transition-smooth text-xs sm:text-sm">
+            Pharmacies
+          </TabsTrigger>
+          <TabsTrigger
+            value="medicine-journey"
+            className="transition-smooth text-xs sm:text-sm col-span-2 sm:col-span-1"
+          >
+            Journey
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="shop" className="space-y-6">
-          {/* Search and Filters */}
-          <Card>
+        <TabsContent value="shop" className="space-y-6 animate-fade-in-up">
+          <Card className="transition-smooth">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Filter className="h-5 w-5" />
@@ -116,19 +99,19 @@ export default function ShopPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
                     placeholder="Search medicines..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 transition-smooth"
                   />
                 </div>
 
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger>
+                  <SelectTrigger className="transition-smooth">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -141,7 +124,7 @@ export default function ShopPage() {
                 </Select>
 
                 <Select onValueChange={handlePriceRangeChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="transition-smooth">
                     <SelectValue placeholder="Price Range" />
                   </SelectTrigger>
                   <SelectContent>
@@ -160,6 +143,7 @@ export default function ShopPage() {
                     setSelectedCategory("all")
                     setSelectedPriceRange([0, 1000])
                   }}
+                  className="transition-smooth hover-scale"
                 >
                   Clear Filters
                 </Button>
@@ -167,57 +151,42 @@ export default function ShopPage() {
             </CardContent>
           </Card>
 
-          {/* Product Grid */}
           <ProductGrid searchQuery={searchQuery} selectedCategory={selectedCategory} priceRange={selectedPriceRange} />
         </TabsContent>
 
-        <TabsContent value="availability" className="space-y-6">
-          <Card>
+        <TabsContent value="availability" className="space-y-6 animate-fade-in-up">
+          <Card className="transition-smooth">
             <CardHeader>
               <CardTitle>Medicine Availability Dashboard</CardTitle>
               <CardDescription>Real-time inventory of available medicines in our network</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center p-6 bg-green-50 rounded-lg">
-                  <div className="text-3xl font-bold text-green-600 mb-2">2,847</div>
-                  <div className="text-sm text-gray-600">Medicines Available</div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                <div className="text-center p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg transition-smooth hover-lift">
+                  <div className="text-3xl font-bold text-emerald-600 mb-2">0</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">Medicines Available</div>
                 </div>
-                <div className="text-center p-6 bg-blue-50 rounded-lg">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">156</div>
-                  <div className="text-sm text-gray-600">Different Categories</div>
+                <div className="text-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-smooth hover-lift">
+                  <div className="text-3xl font-bold text-blue-600 mb-2">0</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">Different Categories</div>
                 </div>
-                <div className="text-center p-6 bg-orange-50 rounded-lg">
-                  <div className="text-3xl font-bold text-orange-600 mb-2">89</div>
-                  <div className="text-sm text-gray-600">Partner Locations</div>
+                <div className="text-center p-6 bg-orange-50 dark:bg-orange-900/20 rounded-lg transition-smooth hover-lift">
+                  <div className="text-3xl font-bold text-orange-600 mb-2">0</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">Partner Locations</div>
                 </div>
               </div>
 
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold mb-4">Most Requested Medicines</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div className="font-medium">Paracetamol 500mg</div>
-                      <div className="text-sm text-gray-600">Pain Relief</div>
-                    </div>
-                    <Badge className="bg-green-100 text-green-800">In Stock</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div className="font-medium">Insulin Pens</div>
-                      <div className="text-sm text-gray-600">Diabetes Care</div>
-                    </div>
-                    <Badge className="bg-orange-100 text-orange-800">Low Stock</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <div className="font-medium">Vitamin D3</div>
-                      <div className="text-sm text-gray-600">Supplements</div>
-                    </div>
-                    <Badge className="bg-green-100 text-green-800">In Stock</Badge>
-                  </div>
-                </div>
+              <div className="mt-8 text-center py-12">
+                <Package className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2 text-slate-700 dark:text-slate-300">
+                  No Medicines Listed Yet
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-4">
+                  Be the first to donate medicines and help build our inventory.
+                </p>
+                <Button asChild className="bg-emerald-600 hover:bg-emerald-700 transition-smooth hover-lift">
+                  <Link href="/donate">Donate Now</Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -233,39 +202,14 @@ export default function ShopPage() {
               <CardDescription>Our trusted partners who distribute medicines to communities in need</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {ngoPartners.map((partner, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="text-center">
-                      <div className="mx-auto mb-4">
-                        <Image
-                          src={partner.logo || "/placeholder.svg"}
-                          alt={`${partner.name} logo`}
-                          width={80}
-                          height={80}
-                          className="rounded-full"
-                        />
-                      </div>
-                      <CardTitle className="text-lg">{partner.name}</CardTitle>
-                      <CardDescription>{partner.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Impact:</span>
-                          <span className="text-sm font-medium">{partner.impact}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Focus:</span>
-                          <span className="text-sm font-medium">{partner.focus}</span>
-                        </div>
-                      </div>
-                      <Button className="w-full mt-4 bg-transparent" variant="outline">
-                        Learn More
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2 text-slate-700 dark:text-slate-300">
+                  NGO Partners Coming Soon
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                  We are actively onboarding verified NGO partners to ensure medicines reach those in need.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -281,42 +225,14 @@ export default function ShopPage() {
               <CardDescription>Partnered pharmacies that support our medicine distribution network</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {pharmacyPartners.map((pharmacy, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="text-center">
-                      <div className="mx-auto mb-4">
-                        <Image
-                          src={pharmacy.logo || "/placeholder.svg"}
-                          alt={`${pharmacy.name} logo`}
-                          width={60}
-                          height={60}
-                          className="rounded"
-                        />
-                      </div>
-                      <CardTitle className="text-lg">{pharmacy.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm">{pharmacy.locations}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm">{pharmacy.services}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm">{pharmacy.specialty}</span>
-                        </div>
-                      </div>
-                      <Button className="w-full mt-4 bg-transparent" variant="outline">
-                        Find Locations
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="text-center py-12">
+                <Building2 className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2 text-slate-700 dark:text-slate-300">
+                  Pharmacy Partners Coming Soon
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                  We are building partnerships with pharmacies to expand our distribution network.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -333,76 +249,71 @@ export default function ShopPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-8">
-                <div className="relative">
-                  <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-gray-200"></div>
-
-                  <div className="relative flex items-start space-x-4 pb-8">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">1</span>
+                {[
+                  {
+                    num: 1,
+                    color: "blue",
+                    title: "Donation Received",
+                    desc: "Medicine donated by generous individuals or organizations",
+                    time: "24-48 hours",
+                  },
+                  {
+                    num: 2,
+                    color: "green",
+                    title: "Quality Verification",
+                    desc: "AI-powered verification and manual inspection by certified pharmacists",
+                    time: "2-3 days",
+                  },
+                  {
+                    num: 3,
+                    color: "yellow",
+                    title: "Inventory & Cataloging",
+                    desc: "Medicines are cataloged and added to our distribution network",
+                    time: "1-2 days",
+                  },
+                  {
+                    num: 4,
+                    color: "purple",
+                    title: "NGO Matching",
+                    desc: "Medicines matched with NGO requests based on need and location",
+                    time: "1-3 days",
+                  },
+                  {
+                    num: 5,
+                    color: "red",
+                    title: "Distribution & Impact",
+                    desc: "Medicines delivered to communities and patients in need",
+                    time: "3-7 days",
+                  },
+                ].map((step, idx, arr) => (
+                  <div
+                    key={step.num}
+                    className={`relative flex items-start space-x-4 ${idx < arr.length - 1 ? "pb-8" : ""}`}
+                  >
+                    <div
+                      className={`flex-shrink-0 w-8 h-8 bg-${step.color}-500 rounded-full flex items-center justify-center`}
+                    >
+                      <span className="text-white text-sm font-bold">{step.num}</span>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold">Donation Received</h3>
-                      <p className="text-gray-600">Medicine donated by generous individuals or organizations</p>
-                      <div className="mt-2 text-sm text-gray-500">Average processing time: 24-48 hours</div>
+                      <h3 className="text-lg font-semibold">{step.title}</h3>
+                      <p className="text-gray-600 dark:text-slate-400">{step.desc}</p>
+                      <div className="mt-2 text-sm text-gray-500 dark:text-slate-500">
+                        Average processing time: {step.time}
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="relative flex items-start space-x-4 pb-8">
-                    <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">2</span>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">Quality Verification</h3>
-                      <p className="text-gray-600">
-                        AI-powered verification and manual inspection by certified pharmacists
-                      </p>
-                      <div className="mt-2 text-sm text-gray-500">Average processing time: 2-3 days</div>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start space-x-4 pb-8">
-                    <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">3</span>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">Inventory & Cataloging</h3>
-                      <p className="text-gray-600">Medicines are cataloged and added to our distribution network</p>
-                      <div className="mt-2 text-sm text-gray-500">Average processing time: 1-2 days</div>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start space-x-4 pb-8">
-                    <div className="flex-shrink-0 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">4</span>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">NGO Matching</h3>
-                      <p className="text-gray-600">Medicines matched with NGO requests based on need and location</p>
-                      <div className="mt-2 text-sm text-gray-500">Average processing time: 1-3 days</div>
-                    </div>
-                  </div>
-
-                  <div className="relative flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">5</span>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">Distribution & Impact</h3>
-                      <p className="text-gray-600">Medicines delivered to communities and patients in need</p>
-                      <div className="mt-2 text-sm text-gray-500">Average delivery time: 3-7 days</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">Track Your Donation Impact</h3>
-                  <p className="text-gray-600 mb-4">
-                    Enter your donation ID to see the real-time status and impact of your contributed medicines.
-                  </p>
-                  <div className="flex gap-2">
-                    <Input placeholder="Enter donation ID (e.g., DON-2024-001234)" className="flex-1" />
-                    <Button>Track</Button>
-                  </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg">
+                <h3 className="text-lg font-semibold mb-4">Track Your Donation Impact</h3>
+                <p className="text-gray-600 dark:text-slate-400 mb-4">
+                  Enter your donation ID to see the real-time status and impact of your contributed medicines.
+                </p>
+                <div className="flex gap-2">
+                  <Input placeholder="Enter donation ID (e.g., DON-2024-001234)" className="flex-1" />
+                  <Button>Track</Button>
                 </div>
               </div>
             </CardContent>

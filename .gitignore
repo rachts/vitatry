@@ -1,22 +1,15 @@
 # Dependencies
-/node_modules
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-/.pnp
+node_modules/
+.pnp/
 .pnp.js
-pnpm-lock.yaml
-yarn.lock
-package-lock.json
+.yarn/
 
-# Next.js
-/.next
-/out
-/build
-/dist
-/.cache
-/.vercel
-.next-static
+# Build outputs
+.next/
+out/
+build/
+dist/
+.vercel/
 
 # Environment variables
 .env
@@ -24,36 +17,46 @@ package-lock.json
 .env.development.local
 .env.test.local
 .env.production.local
-.env.*.local
-.env.production
-.env.development
-.env.test
+.env*.local
 !.env.example
-!.env.local.example
 
-# Vercel
-.vercel
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
 
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
-
-# IDE
-.vscode/
+# IDE and editors
 .idea/
+.vscode/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.c9/
+*.launch
+.settings/
 
-# OS
+# OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # Logs
 logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
-*.log
+lerna-debug.log*
 
 # Runtime data
 pids/
@@ -61,53 +64,30 @@ pids/
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
-coverage/
-playwright-report
-test-results/
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
 
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
+# Cache
+.cache/
+.parcel-cache/
 .eslintcache
+.stylelintcache
+*.cache
 
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
+# Misc
+*.tgz
+.npm/
 .node_repl_history
 
-# Output of 'npm pack'
-*.tgz
+# Local Netlify folder
+.netlify/
 
-# Yarn Integrity file
-.yarn-integrity
+# Storybook
+storybook-static/
 
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# nuxt.js build output
-.nuxt
-
-# vuepress build output
-.vuepress/dist
-
-# Serverless directories
-.serverless
-
-# FuseBox cache
-.fusebox/
-
-# DynamoDB Local files
-.dynamodb/
-
-# TernJS port file
-.tern-port
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp

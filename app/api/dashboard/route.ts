@@ -18,16 +18,30 @@ export async function GET() {
 
     await connectDB()
 
-    const userId = session.user.email
+    const userEmail = session.user.email
 
-    // Fetch donation stats
-    const donations = await Donation.countDocuments({ donorEmail: userId })
+    const myDonations = await Donation.find({ donorEmail: userEmail })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .select("donationId medicineName quantity status createdAt expiryDate")
+      .lean()
+
+    const activeDonations = await Donation.find({
+      status: { $in: ["pending", "verified"] },
+    })
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .select("donationId medicineName quantity status createdAt expiryDate")
+      .lean()
+
+    // Fetch donation stats for the user
+    const donations = await Donation.countDocuments({ donorEmail: userEmail })
     const medicinesVerified = await Donation.countDocuments({
-      donorEmail: userId,
+      donorEmail: userEmail,
       status: "verified",
     })
     const livesHelpedData = await Donation.aggregate([
-      { $match: { donorEmail: userId, status: "distributed" } },
+      { $match: { donorEmail: userEmail, status: "distributed" } },
       { $group: { _id: null, total: { $sum: "$quantity" } } },
     ])
     const livesHelped = livesHelpedData[0]?.total || 0
@@ -36,13 +50,21 @@ export async function GET() {
     const impactScore = donations * 10 + medicinesVerified * 5 + livesHelped
 
     return NextResponse.json({
-      donations,
-      medicinesVerified,
-      livesHelped,
-      impactScore,
+      stats: {
+        donations,
+        medicinesVerified,
+        livesHelped,
+        impactScore,
+      },
+      myDonations: myDonations || [],
+      activeDonations: activeDonations || [],
     })
   } catch (error) {
     console.error("Dashboard API error:", error)
-    return NextResponse.json({ error: "Failed to fetch dashboard data" }, { status: 500 })
+    return NextResponse.json({
+      stats: { donations: 0, medicinesVerified: 0, livesHelped: 0, impactScore: 0 },
+      myDonations: [],
+      activeDonations: [],
+    })
   }
 }

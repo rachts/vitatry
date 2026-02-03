@@ -59,10 +59,10 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f8faf8] to-[#f8faff] flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md transition-all duration-300 hover:shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl text-center text-[#1a472a] flex items-center justify-center gap-3">
+          <CardTitle className="text-2xl text-center text-primary flex items-center justify-center gap-3">
             <img src="/logo.png" alt="VitaMend Logo" className="h-8 w-8" />
             Sign In to VitaMend
           </CardTitle>
@@ -71,7 +71,14 @@ export default function SignIn() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="transition-all duration-200 focus:ring-2 focus:ring-emerald-500/20"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -81,9 +88,14 @@ export default function SignIn() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="transition-all duration-200 focus:ring-2 focus:ring-emerald-500/20"
               />
             </div>
-            <Button type="submit" className="w-full bg-[#2ea043] hover:bg-[#2ea043]/90" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 transition-all duration-200"
+              disabled={isLoading}
+            >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
@@ -97,13 +109,17 @@ export default function SignIn() {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+          <Button
+            variant="outline"
+            className="w-full transition-all duration-200 hover:bg-muted bg-transparent"
+            onClick={handleGoogleSignIn}
+          >
             Continue with Google
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link href="/auth/signup" className="text-[#2ea043] hover:underline">
+            {"Don't have an account? "}
+            <Link href="/auth/signup" className="text-emerald-600 hover:underline transition-colors">
               Sign up
             </Link>
           </p>
