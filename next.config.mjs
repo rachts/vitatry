@@ -20,7 +20,7 @@ const nextConfig = {
       { protocol: "https", hostname: "vercel-storage.com" },
       { protocol: "https", hostname: "blob.vercel-storage.com" },
       { protocol: "https", hostname: "hebbkx1anhila5yf.public.blob.vercel-storage.com" },
-      { protocol: "https", hostname: "firebasestorage.googleapis.com" }, // Added Firebase Storage domain
+
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 31536000, // 1 year cache
@@ -32,7 +32,7 @@ const nextConfig = {
   output: "standalone",
 
   // External packages for Node.js runtime
-  serverExternalPackages: [], // Removed mongoose and bcryptjs
+  serverExternalPackages: [],
 
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",

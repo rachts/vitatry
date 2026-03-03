@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import ClientWrappers from "./_client-wrappers"
 import Navigation from "@/components/navigation"
-import { FirebaseAuthProvider } from "@/components/auth-provider"
+import { AppAuthProvider } from "@/components/auth-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { ErrorBoundary } from "@/components/error-boundary"
 import "./globals.css"
@@ -28,8 +28,8 @@ export const metadata: Metadata = {
     "unused medicines",
     "VitaMend",
   ],
-  authors: [{ name: "VitaMend Team", url: "https://vitamend.in" }],
-  creator: "VitaMend",
+  authors: [{ name: "Rachit", url: "https://vitamend.in" }],
+  creator: "Rachit",
   publisher: "VitaMend",
   robots: {
     index: true,
@@ -115,13 +115,13 @@ export default function RootLayout({
       <body className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-300 antialiased min-h-screen">
         <ErrorBoundary>
           <ClientWrappers>
-            <FirebaseAuthProvider>
+            <AppAuthProvider>
               <div className="h-16">
                 <Navigation />
               </div>
               <main className="min-h-[calc(100vh-4rem)]">{children}</main>
               <Toaster />
-            </FirebaseAuthProvider>
+            </AppAuthProvider>
           </ClientWrappers>
         </ErrorBoundary>
       </body>
