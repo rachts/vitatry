@@ -17,8 +17,6 @@ interface AuthContextType {
   user: AuthUser | null
   loading: boolean
   error: string | null
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, name: string, role?: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -136,56 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [mounted])
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const supabase = getSupabaseClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-  }, [])
-
-  const signUp = useCallback(async (email: string, password: string, name: string, role = "donor") => {
-    const supabase = getSupabaseClient()
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
-        data: {
-          full_name: name,
-          name: name,
-          role: role,
-        },
-      },
-    })
-
-    if (error) throw error
-
-    // If email confirmation is required, user will be in an unconfirmed state
-    if (data.user && !data.user.identities?.length) {
-      throw new Error("An account with this email already exists. Please sign in instead.")
-    }
-
-    // Try to create profile - may fail if RLS blocks it before confirmation, that's ok
-    if (data.user) {
-      try {
-        await supabase.from("profiles").upsert({
-          id: data.user.id,
-          name,
-          email,
-          role,
-        })
-      } catch {
-        // Profile will be created on first login if this fails
-      }
-    }
-
-    // If session exists, user is logged in immediately (no email confirmation required)
-    // If no session, email confirmation is needed
-    if (!data.session) {
-      throw new Error("Please check your email to confirm your account before signing in.")
-    }
-  }, [])
-
   const signInWithGoogle = useCallback(async () => {
     const supabase = getSupabaseClient()
     const { error } = await supabase.auth.signInWithOAuth({
@@ -205,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, signIn, signUp, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, error, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   )

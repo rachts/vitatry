@@ -6,6 +6,7 @@ import ThemeToggle from "@/components/theme-toggle"
 import { useEffect, useRef, useState } from "react"
 import { Menu, X } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/context/AuthContext"
 
 export default function Navigation() {
   const logoRef = useRef<HTMLAnchorElement>(null)
@@ -15,6 +16,7 @@ export default function Navigation() {
   const [scrolled, setScrolled] = useState(false)
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
+  const { user } = useAuth()
 
   const navItems = ["Donate", "Volunteer", "Store", "Transparency", "Founders"]
 
@@ -136,14 +138,14 @@ export default function Navigation() {
         <div ref={actionsRef} className="flex items-center gap-4" style={{ opacity: mounted ? undefined : 1 }}>
           <ThemeToggle />
           <Link
-            href="/dashboard"
+            href={user ? "/dashboard" : "/auth/signin"}
             className={`hidden sm:block rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 ease-out transform hover:scale-[1.02] active:scale-[0.98] ${
-              pathname === "/dashboard"
+              pathname === "/dashboard" || pathname.startsWith("/auth")
                 ? "bg-emerald-700 shadow-lg shadow-emerald-500/30"
                 : "bg-emerald-600 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-500/25"
             }`}
           >
-            Dashboard
+            {user ? "Dashboard" : "Sign In"}
           </Link>
 
           {/* Mobile menu button - Added rotate animation */}
