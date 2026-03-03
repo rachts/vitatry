@@ -56,11 +56,20 @@ export default function SignUp() {
       })
       router.push("/dashboard")
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create account",
-        variant: "destructive",
-      })
+      const msg = error.message || "Failed to create account"
+      // If email confirmation is needed, show a success-like message
+      if (msg.includes("check your email")) {
+        toast({
+          title: "Almost there!",
+          description: msg,
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: msg,
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsLoading(false)
     }

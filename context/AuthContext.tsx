@@ -153,20 +153,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: name,
           name: name,
+          role: role,
         },
       },
     })
 
     if (error) throw error
 
-    // Create profile after signup
+    // If email confirmation is required, user will be in an unconfirmed state
+    if (data.user && !data.user.identities?.length) {
+      throw new Error("An account with this email already exists. Please sign in instead.")
+    }
+
+    // Try to create profile - may fail if RLS blocks it before confirmation, that's ok
     if (data.user) {
-      await supabase.from("profiles").upsert({
-        id: data.user.id,
-        name,
-        email,
-        role,
-      })
+      try {
+        await supabase.from("profiles").upsert({
+          id: data.user.id,
+          name,
+          email,
+          role,
+        })
+      } catch {
+        // Profile will be created on first login if this fails
+      }
+    }
+
+    // If session exists, user is logged in immediately (no email confirmation required)
+    // If no session, email confirmation is needed
+    if (!data.session) {
+      throw new Error("Please check your email to confirm your account before signing in.")
     }
   }, [])
 
