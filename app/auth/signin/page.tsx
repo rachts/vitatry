@@ -1,15 +1,14 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 
 export default function SignIn() {
@@ -18,35 +17,23 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const { signIn, signInWithGoogle } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      await signIn(email, password)
+      toast({
+        title: "Success",
+        description: "Signed in successfully",
       })
-
-      if (result?.error) {
-        toast({
-          title: "Error",
-          description: "Invalid credentials",
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Success",
-          description: "Signed in successfully",
-        })
-        router.push("/dashboard")
-      }
-    } catch (error) {
+      router.push("/dashboard")
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Something went wrong",
+        description: error.message || "Invalid credentials",
         variant: "destructive",
       })
     } finally {
@@ -54,8 +41,21 @@ export default function SignIn() {
     }
   }
 
-  const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl: "/dashboard" })
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle()
+      toast({
+        title: "Success",
+        description: "Signed in with Google",
+      })
+      router.push("/dashboard")
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sign in with Google",
+        variant: "destructive",
+      })
+    }
   }
 
   return (

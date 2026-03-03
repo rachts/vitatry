@@ -1,7 +1,7 @@
 "use client"
 
-import { useSession } from "next-auth/react"
-import { redirect } from "next/navigation"
+import { useAuth } from "@/context/AuthContext"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,26 +12,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ArrowRight, Heart, Pill, Users, Award, Package, Clock, CheckCircle, XCircle, RefreshCw } from "lucide-react"
-
 interface Donation {
-  _id: string
-  donationId: string
+  id?: string
+  _id?: string
   medicineName: string
   quantity: number
-  status: "pending" | "verified" | "distributed" | "rejected"
-  createdAt: string
   expiryDate: string
-}
-
-interface DashboardData {
-  stats: {
-    donations: number
-    medicinesVerified: number
-    livesHelped: number
-    impactScore: number
-  }
-  myDonations: Donation[]
-  activeDonations: Donation[]
+  status: "pending" | "verified" | "distributed" | "rejected"
+  createdAt: string | Date
+  donorEmail?: string
 }
 
 const statusColors = {
@@ -62,28 +51,45 @@ const quickActions = [
 ]
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession()
-  const [data, setData] = useState<DashboardData>({
-    stats: { donations: 0, medicinesVerified: 0, livesHelped: 0, impactScore: 0 },
-    myDonations: [],
-    activeDonations: [],
-  })
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
+  const [myDonations, setMyDonations] = useState<Donation[]>([])
+  const [activeDonations, setActiveDonations] = useState<Donation[]>([])
+  const [stats, setStats] = useState({ totalDonations: 0, medicinesVerified: 0, livesHelped: 0, activeVolunteers: 0 })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      redirect("/auth/signin?callbackUrl=/dashboard")
+    if (!authLoading && !user) {
+      router.push("/auth/signin?callbackUrl=/dashboard")
     }
-  }, [status])
+  }, [authLoading, user, router])
 
   const fetchData = async () => {
+    if (!user) return
+
     try {
-      const res = await fetch("/api/dashboard")
-      if (res.ok) {
-        const result = await res.json()
-        setData(result)
-      }
+      const [donationsRes, statsRes] = await Promise.all([
+        fetch(`/api/donations?email=${encodeURIComponent(user.email || "")}`),
+        fetch("/api/stats"),
+      ])
+
+      const donationsData = await donationsRes.json()
+      const statsData = await statsRes.json()
+
+      const allDonations = (donationsData.donations || []).map((d: any) => ({
+        ...d,
+        id: d._id || d.id,
+      }))
+
+      setMyDonations(allDonations)
+      setActiveDonations(allDonations.filter((d: Donation) => d.status === "pending" || d.status === "verified"))
+      setStats({
+        totalDonations: statsData.totalDonations || 0,
+        medicinesVerified: statsData.approvedDonations || 0,
+        livesHelped: statsData.distributedDonations || 0,
+        activeVolunteers: statsData.activeVolunteers || 0,
+      })
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error)
     } finally {
@@ -93,17 +99,17 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    if (session?.user) {
+    if (user) {
       fetchData()
     }
-  }, [session])
+  }, [user])
 
   const handleRefresh = () => {
     setRefreshing(true)
     fetchData()
   }
 
-  if (status === "loading" || loading) {
+  if (authLoading || loading) {
     return (
       <Shell>
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -114,31 +120,25 @@ export default function DashboardPage() {
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A"
-    return new Date(dateString).toLocaleDateString("en-IN", {
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return "N/A"
+    const d = typeof date === "string" ? new Date(date) : date
+    return d.toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
       year: "numeric",
     })
   }
 
-  const safeStats = {
-    donations: data?.stats?.donations ?? 0,
-    medicinesVerified: data?.stats?.medicinesVerified ?? 0,
-    livesHelped: data?.stats?.livesHelped ?? 0,
-    impactScore: data?.stats?.impactScore ?? 0,
-  }
-
   const statsConfig = [
-    { title: "Total Donations", value: safeStats.donations, icon: Heart, color: "emerald", suffix: "" },
-    { title: "Medicines Verified", value: safeStats.medicinesVerified, icon: Pill, color: "blue", suffix: "" },
-    { title: "Lives Helped", value: safeStats.livesHelped, icon: Users, color: "purple", suffix: "" },
-    { title: "Impact Score", value: safeStats.impactScore, icon: Award, color: "orange", suffix: " pts" },
+    { title: "Total Donations", value: stats.totalDonations, icon: Heart, color: "emerald", suffix: "" },
+    { title: "Medicines Verified", value: stats.medicinesVerified, icon: Pill, color: "blue", suffix: "" },
+    { title: "Lives Helped", value: stats.livesHelped, icon: Users, color: "purple", suffix: "" },
+    { title: "Active Volunteers", value: stats.activeVolunteers, icon: Award, color: "orange", suffix: "" },
   ]
 
   return (
@@ -148,7 +148,7 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in-up">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-            <p className="text-slate-600 dark:text-slate-400">Welcome back, {session?.user?.name || "User"}!</p>
+            <p className="text-slate-600 dark:text-slate-400">Welcome back, {user.name || "User"}!</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -170,7 +170,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Actions - Use explicit color classes */}
+        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {quickActions.map((action, idx) => (
             <Button
@@ -189,7 +189,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Stats Cards - Use explicit color classes */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {statsConfig.map((stat, idx) => (
             <Card
@@ -233,7 +233,7 @@ export default function DashboardPage() {
                 <CardDescription>All medicines you have donated to the platform</CardDescription>
               </CardHeader>
               <CardContent>
-                {data.myDonations.length === 0 ? (
+                {myDonations.length === 0 ? (
                   <div className="text-center py-12">
                     <Heart className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                     <p className="text-slate-600 dark:text-slate-400 mb-4">You haven&apos;t made any donations yet.</p>
@@ -257,11 +257,11 @@ export default function DashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {data.myDonations.map((donation) => {
+                        {myDonations.map((donation) => {
                           const StatusIcon = statusIcons[donation.status]
                           return (
                             <TableRow
-                              key={donation._id}
+                              key={donation.id}
                               className="transition-smooth hover:bg-slate-50 dark:hover:bg-slate-800/50"
                             >
                               <TableCell className="font-medium">{donation.medicineName}</TableCell>
@@ -293,7 +293,7 @@ export default function DashboardPage() {
                 <CardDescription>Currently available medicines on the platform</CardDescription>
               </CardHeader>
               <CardContent>
-                {data.activeDonations.length === 0 ? (
+                {activeDonations.length === 0 ? (
                   <div className="text-center py-12">
                     <Package className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                     <p className="text-slate-600 dark:text-slate-400">
@@ -302,11 +302,11 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {data.activeDonations.map((donation, idx) => {
+                    {activeDonations.map((donation, idx) => {
                       const StatusIcon = statusIcons[donation.status]
                       return (
                         <Card
-                          key={donation._id}
+                          key={donation.id}
                           className="dark:border-slate-700 transition-smooth hover-lift animate-fade-in-up"
                           style={{ animationDelay: `${idx * 50}ms` }}
                         >
@@ -350,19 +350,16 @@ export default function DashboardPage() {
               <CardContent className="space-y-4">
                 <div>
                   <p className="font-medium text-slate-900 dark:text-white">Email</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">{session.user?.email}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{user.email}</p>
                 </div>
                 <div>
                   <p className="font-medium text-slate-900 dark:text-white">Name</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">{session.user?.name}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{user.name}</p>
                 </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="dark:border-slate-700 dark:hover:bg-slate-800 bg-transparent transition-smooth"
-                >
-                  <Link href="/profile">Edit Profile</Link>
-                </Button>
+                <div>
+                  <p className="font-medium text-slate-900 dark:text-white">Role</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 capitalize">{user.role}</p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

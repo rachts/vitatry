@@ -14,6 +14,12 @@ const founders = [
     image: "/images/img-20250508-025607.jpg",
     linkedin: "https://www.linkedin.com/in/rachitkrtiwari/",
   },
+  {
+    name: "Nandini Dubey",
+    role: "Co-Founder",
+    image: "/images/nandini-dubey.jpg",
+    linkedin: "https://www.linkedin.com/in/nandini-dubey-75a67a322/",
+  },
 ] as const
 
 const FounderCard = memo(function FounderCard({
@@ -95,11 +101,11 @@ export default function FoundersPage() {
       <div className="py-12 px-4 min-h-screen">
         {/* Title */}
         <div className="text-center mb-12 animate-fade-in-up">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-white mb-3">Meet the Founder</h1>
-          <p className="text-slate-600 dark:text-slate-400 max-w-xl mx-auto">The visionary behind VitaMend.</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-white mb-3">Meet the Founders</h1>
+          <p className="text-slate-600 dark:text-slate-400 max-w-xl mx-auto">The visionaries behind VitaMend.</p>
         </div>
 
-        <div className="flex justify-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
           {founders.map((founder, index) => (
             <FounderCard key={founder.name} founder={founder} index={index} />
           ))}

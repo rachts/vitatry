@@ -1,5 +1,6 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+"use client"
+
+import { useAuth } from "@/context/AuthContext"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,13 +9,26 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Settings, Bell, Shield, User } from "lucide-react"
+import { useEffect } from "react"
 
-export default async function SettingsPage() {
-  const session = await getServerSession(authOptions)
+export default function SettingsPage() {
+  const { user, loading, logout } = useAuth()
 
-  if (!session) {
-    redirect("/auth/signin")
+  useEffect(() => {
+    if (!loading && !user) {
+      redirect("/auth/signin")
+    }
+  }, [user, loading])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+      </div>
+    )
   }
+
+  if (!user) return null
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -28,7 +42,6 @@ export default async function SettingsPage() {
         </div>
 
         <div className="space-y-6">
-          {/* Profile Settings */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -41,26 +54,21 @@ export default async function SettingsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" defaultValue={session.user.name || ""} />
+                  <Input id="name" defaultValue={user.displayName || ""} />
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue={session.user.email || ""} />
+                  <Input id="email" type="email" defaultValue={user.email || ""} disabled />
                 </div>
               </div>
               <div>
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
               </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" placeholder="Your address for medicine pickup" />
-              </div>
               <Button>Save Changes</Button>
             </CardContent>
           </Card>
 
-          {/* Notification Settings */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -85,26 +93,9 @@ export default async function SettingsPage() {
                 </div>
                 <Switch defaultChecked />
               </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Impact Reports</p>
-                  <p className="text-sm text-muted-foreground">Monthly reports about your contribution impact</p>
-                </div>
-                <Switch />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Marketing Communications</p>
-                  <p className="text-sm text-muted-foreground">Updates about new features and campaigns</p>
-                </div>
-                <Switch />
-              </div>
             </CardContent>
           </Card>
 
-          {/* Privacy & Security */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -121,30 +112,9 @@ export default async function SettingsPage() {
                 </div>
                 <Switch />
               </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Enable
-                </Button>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Data Export</p>
-                  <p className="text-sm text-muted-foreground">Download a copy of your data</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Export
-                </Button>
-              </div>
             </CardContent>
           </Card>
 
-          {/* Danger Zone */}
           <Card className="border-red-200">
             <CardHeader>
               <CardTitle className="text-red-600">Danger Zone</CardTitle>
@@ -153,11 +123,11 @@ export default async function SettingsPage() {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Delete Account</p>
-                  <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
+                  <p className="font-medium">Sign Out</p>
+                  <p className="text-sm text-muted-foreground">Sign out of your account</p>
                 </div>
-                <Button variant="destructive" size="sm">
-                  Delete Account
+                <Button variant="destructive" size="sm" onClick={logout}>
+                  Sign Out
                 </Button>
               </div>
             </CardContent>

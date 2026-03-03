@@ -1,6 +1,4 @@
-import { db, storage } from "@/firebase/firebaseConfig"
-import { collection, addDoc, Timestamp } from "firebase/firestore"
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
+"use client"
 
 interface DonationFormData {
   donorName: string
@@ -27,6 +25,13 @@ interface SubmitResult {
 
 export async function submitDonationToFirebase(formData: DonationFormData): Promise<SubmitResult> {
   try {
+    const { getFirestoreDb, getFirebaseStorage } = await import("@/firebase/config")
+    const { collection, addDoc, Timestamp } = await import("firebase/firestore")
+    const { ref, uploadBytes, getDownloadURL } = await import("firebase/storage")
+
+    const db = await getFirestoreDb()
+    const storage = await getFirebaseStorage()
+
     const {
       donorName,
       medicineName,

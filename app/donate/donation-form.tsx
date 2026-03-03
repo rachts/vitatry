@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Upload, X, Sparkles, Heart } from "lucide-react"
 import { OCRService } from "@/lib/ai/ocr-service"
-import { submitDonationToFirebase } from "@/lib/submitDonation"
 
 export default function DonationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -161,48 +160,60 @@ export default function DonationForm() {
         return
       }
 
-      const result = await submitDonationToFirebase({
-        donorName: formData.donorName,
-        medicineName: formData.medicineName,
-        brand: formData.brand,
-        genericName: formData.genericName || undefined,
-        dosage: formData.dosage,
-        quantity: Number.parseInt(formData.quantity),
-        expiryDate: formData.expiryDate,
-        condition: formData.condition,
-        category: formData.category,
-        donorEmail: formData.donorEmail,
-        donorPhone: formData.donorPhone,
-        donorAddress: formData.donorAddress,
-        notes: formData.notes || undefined,
-        files: images,
+      // Upload images first
+      let imageUrls: string[] = []
+      if (images.length > 0) {
+        const uploadFormData = new FormData()
+        images.forEach((img) => uploadFormData.append("files", img))
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadFormData })
+        const uploadData = await uploadRes.json()
+        if (!uploadRes.ok) throw new Error(uploadData.error || "Image upload failed")
+        imageUrls = uploadData.urls || []
+      }
+
+      // Submit donation to MongoDB via API route
+      const res = await fetch("/api/donations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          donorName: formData.donorName,
+          donorEmail: formData.donorEmail,
+          donorPhone: formData.donorPhone,
+          medicineName: formData.medicineName,
+          medicineType: formData.category,
+          quantity: Number.parseInt(formData.quantity),
+          expiryDate: formData.expiryDate,
+          batchNumber: formData.brand,
+          manufacturer: formData.genericName || formData.brand,
+          notes: `Condition: ${formData.condition}. Dosage: ${formData.dosage}. ${formData.notes || ""}`.trim(),
+          imageUrls,
+        }),
       })
 
-      if (result.success) {
-        toast({
-          title: "Donation Submitted!",
-          description: result.message,
-        })
-        // Reset form
-        setFormData({
-          medicineName: "",
-          brand: "",
-          genericName: "",
-          dosage: "",
-          quantity: "",
-          expiryDate: "",
-          condition: "unopened",
-          category: "tablet",
-          donorName: "",
-          donorEmail: "",
-          donorPhone: "",
-          donorAddress: "",
-          notes: "",
-        })
-        setImages([])
-      } else {
-        throw new Error(result.message)
-      }
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || "Submission failed")
+
+      toast({
+        title: "Donation Submitted!",
+        description: "Thank you for your generous donation. We will review it shortly.",
+      })
+
+      setFormData({
+        medicineName: "",
+        brand: "",
+        genericName: "",
+        dosage: "",
+        quantity: "",
+        expiryDate: "",
+        condition: "unopened",
+        category: "tablet",
+        donorName: "",
+        donorEmail: "",
+        donorPhone: "",
+        donorAddress: "",
+        notes: "",
+      })
+      setImages([])
     } catch (error: any) {
       toast({
         title: "Submission Failed",

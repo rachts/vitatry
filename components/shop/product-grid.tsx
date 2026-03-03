@@ -10,8 +10,9 @@ import { useCart } from "./cart-provider"
 import { toast } from "sonner"
 import { ShoppingCart, Heart, Star, Package } from "lucide-react"
 
+
 interface Product {
-  _id: string
+  id: string
   name: string
   description: string
   price: number
@@ -46,14 +47,21 @@ export default function ProductGrid({
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/shop/products")
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch products")
-      }
-
-      const data = await response.json()
-      setProducts(data.products || [])
+      const res = await fetch("/api/medicines")
+      const json = await res.json()
+      const meds = (json.medicines || []).map((m: any, i: number) => ({
+        id: m.id || m._id || String(i),
+        name: m.name,
+        description: m.description || `${m.type} - ${m.manufacturer || "Unknown"}`,
+        price: 0,
+        category: m.type || "other",
+        inStock: m.quantity || 0,
+        imageUrl: m.imageUrls?.[0] || "/placeholder.svg",
+        rating: m.verified ? 5 : 3,
+        reviews: 0,
+        tags: [m.type, m.verified ? "Verified" : "Pending"].filter(Boolean),
+      }))
+      setProducts(meds)
     } catch (err) {
       console.error("Error fetching products:", err)
       setError("Failed to load products")
@@ -74,7 +82,7 @@ export default function ProductGrid({
 
   const handleAddToCart = async (product: Product) => {
     try {
-      await addToCart(product._id, 1)
+      await addToCart(product.id!, 1)
       toast.success(`${product.name} added to cart!`)
     } catch (error) {
       toast.error("Failed to add item to cart")
@@ -129,7 +137,7 @@ export default function ProductGrid({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
       {filteredProducts.map((product, idx) => (
         <Card
-          key={product._id}
+          key={product.id}
           className="group transition-smooth hover-lift dark:border-slate-700 animate-fade-in-up"
           style={{ animationDelay: `${idx * 50}ms` }}
         >

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/context/AuthContext"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ import { Bell, CheckCheck } from "lucide-react"
 import Link from "next/link"
 
 interface Notification {
-  _id: string
+  id: string
   title: string
   message: string
   type: string
@@ -25,59 +25,22 @@ interface Notification {
 }
 
 export function NotificationBell() {
-  const { data: session } = useSession()
+  const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
-    if (session?.user) {
-      fetchNotifications()
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(fetchNotifications, 30000)
-      return () => clearInterval(interval)
-    }
-  }, [session])
-
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch("/api/notifications?limit=10")
-      const data = await response.json()
-      setNotifications(data.notifications)
-      setUnreadCount(data.unreadCount)
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error)
-    }
-  }
-
-  const markAsRead = async (notificationId: string) => {
-    try {
-      await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "markAsRead", notificationId }),
-      })
-
-      setNotifications(notifications.map((n) => (n._id === notificationId ? { ...n, read: true } : n)))
-      setUnreadCount(Math.max(0, unreadCount - 1))
-    } catch (error) {
-      console.error("Failed to mark notification as read:", error)
-    }
-  }
-
-  const markAllAsRead = async () => {
-    try {
-      await fetch("/api/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "markAllAsRead" }),
-      })
-
-      setNotifications(notifications.map((n) => ({ ...n, read: true })))
+    if (user) {
+      // Mock notifications - replace with Firestore query
+      setNotifications([])
       setUnreadCount(0)
-    } catch (error) {
-      console.error("Failed to mark all notifications as read:", error)
     }
+  }, [user])
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map((n) => ({ ...n, read: true })))
+    setUnreadCount(0)
   }
 
   const getNotificationIcon = (type: string) => {
@@ -88,14 +51,12 @@ export function NotificationBell() {
         return "🤝"
       case "achievement":
         return "🏆"
-      case "recall":
-        return "⚠️"
       default:
         return "📢"
     }
   }
 
-  if (!session) return null
+  if (!user) return null
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -125,32 +86,17 @@ export function NotificationBell() {
         ) : (
           <div className="max-h-96 overflow-y-auto">
             {notifications.map((notification) => (
-              <DropdownMenuItem key={notification._id} className="p-0">
+              <DropdownMenuItem key={notification.id} className="p-0">
                 <div
                   className={`w-full p-3 cursor-pointer hover:bg-gray-50 ${
                     !notification.read ? "bg-blue-50 border-l-4 border-l-blue-500" : ""
                   }`}
-                  onClick={() => {
-                    if (!notification.read) {
-                      markAsRead(notification._id)
-                    }
-                    if (notification.actionUrl) {
-                      window.location.href = notification.actionUrl
-                    }
-                    setIsOpen(false)
-                  }}
                 >
                   <div className="flex items-start gap-3">
                     <span className="text-lg">{getNotificationIcon(notification.type)}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">{notification.title}</p>
-                        {!notification.read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />}
-                      </div>
+                      <p className="font-medium text-sm truncate">{notification.title}</p>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{notification.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(notification.createdAt).toLocaleDateString()}
-                      </p>
                     </div>
                   </div>
                 </div>

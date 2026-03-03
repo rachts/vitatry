@@ -16,7 +16,7 @@ export default function Navigation() {
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
 
-  const navItems = ["Donate", "Volunteer", "Transparency", "Founders"]
+  const navItems = ["Donate", "Volunteer", "Store", "Transparency", "Founders"]
 
   useEffect(() => {
     setMounted(true)

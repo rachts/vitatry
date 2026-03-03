@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
+
 const volunteerSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
   email: z.string().email("Valid email is required"),
@@ -80,30 +81,34 @@ export default function VolunteerForm() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch("/api/volunteer", {
+      const res = await fetch("/api/volunteers", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.fullName,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          city: data.occupation,
+          availability: data.availability.join(", "),
+          skills: [data.role, data.experience, data.hasTransport ? "has-transport" : "", data.canLift ? "can-lift" : ""].filter(Boolean),
+          experience: `${data.experience} experience. DOB: ${data.dateOfBirth}. Emergency: ${data.emergencyContact} (${data.emergencyPhone})`,
+          motivation: `${data.motivation}${data.medicalConditions ? `. Medical: ${data.medicalConditions}` : ""}${data.references ? `. Refs: ${data.references}` : ""}`,
+        }),
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to submit application")
-      }
-
-      const result = await response.json()
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || "Submission failed")
 
       toast.success("Application submitted successfully!", {
         description: "Thank you for volunteering. We will contact you soon with next steps.",
       })
-
       reset()
       setSelectedAvailability([])
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting application:", error)
       toast.error("Failed to submit application", {
-        description: "Please try again later or contact support.",
+        description: error.message || "Please try again later or contact support.",
       })
     } finally {
       setIsSubmitting(false)

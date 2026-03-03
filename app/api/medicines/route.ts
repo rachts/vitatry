@@ -1,46 +1,34 @@
-import { type NextRequest, NextResponse } from "next/server"
-import dbConnect from "@/lib/dbConnect"
-import Donation from "@/models/Donation"
+import { NextResponse } from "next/server"
+import { getMedicines } from "@/lib/db/medicines"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-export const revalidate = 0
-
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    await dbConnect()
-
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get("status") || "verified"
-    const limit = Math.min(Number.parseInt(searchParams.get("limit") || "20"), 100)
-    const page = Math.max(Number.parseInt(searchParams.get("page") || "1"), 1)
+    const limit = Number(searchParams.get("limit") || "50")
 
-    const query: Record<string, any> = {
-      status: status,
-      isReserved: false,
-    }
+    const medicines = await getMedicines(limit)
 
-    const skip = (page - 1) * limit
-    const [medicines, total] = await Promise.all([
-      Donation.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-      Donation.countDocuments(query),
-    ])
+    const serialized = medicines.map((m) => ({
+      id: m._id?.toString(),
+      name: m.name,
+      type: m.type,
+      quantity: m.quantity,
+      expiryDate: m.expiryDate,
+      batchNumber: m.batchNumber,
+      manufacturer: m.manufacturer,
+      description: m.description,
+      imageUrls: m.imageUrls,
+      verified: m.verified,
+      status: m.status,
+      createdAt: m.createdAt,
+    }))
 
-    return NextResponse.json({
-      success: true,
-      medicines: medicines.map((m) => ({
-        ...m,
-        _id: m._id?.toString(),
-      })),
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    })
-  } catch (error: any) {
+    return NextResponse.json({ medicines: serialized })
+  } catch (error) {
     console.error("Error fetching medicines:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch medicines" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to fetch medicines" },
+      { status: 500 }
+    )
   }
 }

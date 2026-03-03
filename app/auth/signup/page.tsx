@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 
 export default function SignUp() {
@@ -23,6 +23,7 @@ export default function SignUp() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const { signUp } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,40 +37,28 @@ export default function SignUp() {
       return
     }
 
+    if (formData.password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-        }),
+      await signUp(formData.email, formData.password, formData.name, formData.role)
+      toast({
+        title: "Success",
+        description: "Account created successfully!",
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Account created successfully! Please sign in.",
-        })
-        router.push("/auth/signin")
-      } else {
-        const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.error || "Failed to create account",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
+      router.push("/dashboard")
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Something went wrong",
+        description: error.message || "Failed to create account",
         variant: "destructive",
       })
     } finally {

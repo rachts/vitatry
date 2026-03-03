@@ -1,17 +1,46 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+"use client"
+
+import { useAuth } from "@/context/AuthContext"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { User, Mail, Calendar, Award, Heart } from "lucide-react"
+import { useEffect, useState } from "react"
 
-export default async function ProfilePage() {
-  const session = await getServerSession(authOptions)
+export default function ProfilePage() {
+  const { user, loading } = useAuth()
+  const [donationCount, setDonationCount] = useState(0)
 
-  if (!session) {
-    redirect("/auth/signin")
+  useEffect(() => {
+    if (!loading && !user) {
+      redirect("/auth/signin")
+    }
+    if (user) {
+      fetchUserDonations()
+    }
+  }, [user, loading])
+
+  const fetchUserDonations = async () => {
+    if (!user) return
+    try {
+      const res = await fetch(`/api/donations?email=${encodeURIComponent(user.email || "")}`)
+      const data = await res.json()
+      setDonationCount((data.donations || []).length)
+    } catch (error) {
+      console.error("Error fetching donations:", error)
+    }
   }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+      </div>
+    )
+  }
+
+  if (!user) return null
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -25,25 +54,29 @@ export default async function ProfilePage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Profile Info */}
           <div className="md:col-span-1">
             <Card>
               <CardHeader className="text-center">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <User className="h-10 w-10 text-green-600" />
                 </div>
-                <CardTitle>{session.user.name}</CardTitle>
-                <CardDescription>{session.user.email}</CardDescription>
-                <Badge className="mt-2">{session.user.role || "donor"}</Badge>
+                <CardTitle>{user.displayName || "User"}</CardTitle>
+                <CardDescription>{user.email}</CardDescription>
+                <Badge className="mt-2">Donor</Badge>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{session.user.email}</span>
+                  <span className="text-sm">{user.email}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Joined December 2024</span>
+                  <span className="text-sm">
+                    Joined{" "}
+                    {user.metadata?.creationTime
+                      ? new Date(user.metadata.creationTime).toLocaleDateString()
+                      : "Recently"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Award className="h-4 w-4 text-muted-foreground" />
@@ -53,9 +86,7 @@ export default async function ProfilePage() {
             </Card>
           </div>
 
-          {/* Activity & Stats */}
           <div className="md:col-span-2 space-y-6">
-            {/* Impact Stats */}
             <Card>
               <CardHeader>
                 <CardTitle>Your Impact</CardTitle>
@@ -65,75 +96,43 @@ export default async function ProfilePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-green-50 rounded-lg">
                     <Heart className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-green-600">12</div>
+                    <div className="text-2xl font-bold text-green-600">{donationCount}</div>
                     <div className="text-sm text-muted-foreground">Medicines Donated</div>
                   </div>
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
                     <User className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-blue-600">47</div>
+                    <div className="text-2xl font-bold text-blue-600">{donationCount * 3}</div>
                     <div className="text-sm text-muted-foreground">People Helped</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Your latest donations and contributions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    {
-                      action: "Medicine Donated",
-                      item: "Paracetamol 500mg x50",
-                      status: "verified",
-                      time: "2 days ago",
-                    },
-                    { action: "Medicine Donated", item: "Antibiotics x30", status: "distributed", time: "1 week ago" },
-                    { action: "Profile Updated", item: "Added phone number", status: "completed", time: "2 weeks ago" },
-                  ].map((activity, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{activity.action}</p>
-                        <p className="text-sm text-muted-foreground">{activity.item}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant={activity.status === "distributed" ? "default" : "secondary"}>
-                          {activity.status}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Achievements */}
             <Card>
               <CardHeader>
                 <CardTitle>Achievements</CardTitle>
-                <CardDescription>Badges and milestones you've earned</CardDescription>
+                <CardDescription>Badges and milestones you have earned</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 border rounded-lg">
-                    <Award className="h-8 w-8 text-yellow-500" />
-                    <div>
-                      <p className="font-medium">First Donation</p>
-                      <p className="text-sm text-muted-foreground">Made your first medicine donation</p>
+                  {donationCount > 0 && (
+                    <div className="flex items-center gap-3 p-3 border rounded-lg">
+                      <Award className="h-8 w-8 text-yellow-500" />
+                      <div>
+                        <p className="font-medium">First Donation</p>
+                        <p className="text-sm text-muted-foreground">Made your first medicine donation</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 border rounded-lg">
-                    <Heart className="h-8 w-8 text-red-500" />
-                    <div>
-                      <p className="font-medium">Helping Hand</p>
-                      <p className="text-sm text-muted-foreground">Helped 10+ people</p>
+                  )}
+                  {donationCount >= 10 && (
+                    <div className="flex items-center gap-3 p-3 border rounded-lg">
+                      <Heart className="h-8 w-8 text-red-500" />
+                      <div>
+                        <p className="font-medium">Helping Hand</p>
+                        <p className="text-sm text-muted-foreground">Helped 10+ people</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

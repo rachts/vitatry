@@ -1,63 +1,78 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import type { Metadata } from "next"
 import VolunteerForm from "./volunteer-form"
-import { Card, CardContent } from "@/components/ui/card"
-import { Heart, Users, Shield, Award } from "lucide-react"
+import { Heart, Users, Clock, Award } from "lucide-react"
 
-export const dynamic = "force-dynamic"
+export const metadata: Metadata = {
+  title: "Volunteer | VitaMend",
+  description: "Join our mission to help distribute medicines to those in need. Become a volunteer today.",
+}
 
-export default async function VolunteerPage() {
-  const session = await getServerSession(authOptions).catch(() => null)
+const benefits = [
+  {
+    icon: Heart,
+    title: "Make a Difference",
+    description: "Help distribute essential medicines to underserved communities.",
+  },
+  {
+    icon: Users,
+    title: "Join a Community",
+    description: "Connect with like-minded individuals passionate about healthcare access.",
+  },
+  {
+    icon: Clock,
+    title: "Flexible Hours",
+    description: "Choose volunteer shifts that fit your schedule and availability.",
+  },
+  {
+    icon: Award,
+    title: "Gain Experience",
+    description: "Develop skills in healthcare logistics, coordination, and community service.",
+  },
+]
 
-  // If auth is required for volunteering, keep this redirect. Otherwise remove it.
-  if (!session) {
-    // redirect("/auth/signin?callbackUrl=/volunteer")
-  }
-
+export default function VolunteerPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-blue-50">
-      <section className="container mx-auto px-4 py-10">
-        <div className="mb-8 flex items-center gap-3">
-          <img
-            src="/images/design-mode/VITAMEND_LOGO.png"
-            alt="VitaMend logo"
-            className="h-10 w-10"
-          />
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Volunteer with VitaMend</h1>
-            <p className="text-slate-600">Help collect, verify, and distribute medicines to those in need.</p>
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+      {/* Hero Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl mb-4">
+            Become a <span className="text-emerald-600">Volunteer</span>
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Your time and dedication can help save lives. Join our network of volunteers committed to making healthcare
+            accessible for everyone.
+          </p>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 bg-muted/30">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl font-semibold text-center mb-8">Why Volunteer With Us?</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {benefits.map((benefit, index) => (
+              <div
+                key={benefit.title}
+                className="bg-card rounded-xl p-6 shadow-sm border border-border hover:shadow-md transition-shadow"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
+                  <benefit.icon className="w-6 h-6 text-emerald-600" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">{benefit.title}</h3>
+                <p className="text-muted-foreground text-sm">{benefit.description}</p>
+              </div>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Volunteer Opportunities */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <Card className="text-center p-6 border-green-200 bg-green-50 hover:shadow-lg transition-shadow">
-            <Shield className="h-10 w-10 text-green-600 mx-auto mb-4" />
-            <h3 className="font-semibold text-green-800 mb-2">Medicine Verification</h3>
-            <p className="text-sm text-green-700">Verify donated medicines using AI-backed tools</p>
-          </Card>
-          <Card className="text-center p-6 border-blue-200 bg-blue-50 hover:shadow-lg transition-shadow">
-            <Users className="h-10 w-10 text-blue-600 mx-auto mb-4" />
-            <h3 className="font-semibold text-blue-800 mb-2">Pickup & Delivery</h3>
-            <p className="text-sm text-blue-700">Assist with collecting medicines and delivering to NGOs</p>
-          </Card>
-          <Card className="text-center p-6 border-purple-200 bg-purple-50 hover:shadow-lg transition-shadow">
-            <Heart className="h-10 w-10 text-purple-600 mx-auto mb-4" />
-            <h3 className="font-semibold text-purple-800 mb-2">Community Outreach</h3>
-            <p className="text-sm text-purple-700">Spread awareness about medicine donation</p>
-          </Card>
-          <Card className="text-center p-6 border-orange-200 bg-orange-50 hover:shadow-lg transition-shadow">
-            <Award className="h-10 w-10 text-orange-600 mx-auto mb-4" />
-            <h3 className="font-semibold text-orange-800 mb-2">Admin Support</h3>
-            <p className="text-sm text-orange-700">Help with documentation and coordination</p>
-          </Card>
+      {/* Form Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <VolunteerForm />
         </div>
-
-        <Card>
-          <CardContent className="pt-6">
-            <VolunteerForm />
-          </CardContent>
-        </Card>
       </section>
     </main>
   )

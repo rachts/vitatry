@@ -1,11 +1,68 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Shield, Eye, FileText, Users, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-
 export default function TransparencyPage() {
+  const [stats, setStats] = useState({
+    totalDonations: 0,
+    medicinesVerified: 0,
+    livesHelped: 0,
+    activeVolunteers: 0,
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch("/api/stats")
+        const data = await res.json()
+        setStats({
+          totalDonations: data.totalDonations || 0,
+          medicinesVerified: data.approvedDonations || 0,
+          livesHelped: data.distributedDonations || 0,
+          activeVolunteers: data.activeVolunteers || 0,
+        })
+      } catch (error) {
+        console.error("Failed to fetch stats:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [])
+
+  const statsConfig = [
+    {
+      title: "Total Donations",
+      value: stats.totalDonations,
+      subtitle: stats.totalDonations === 0 ? "Be the first to donate" : "Medicines donated",
+      icon: FileText,
+    },
+    {
+      title: "Verified Medicines",
+      value: stats.medicinesVerified,
+      subtitle: stats.medicinesVerified === 0 ? "Pending verifications" : "Quality checked",
+      icon: Shield,
+    },
+    {
+      title: "Lives Helped",
+      value: stats.livesHelped,
+      subtitle: stats.livesHelped === 0 ? "Ready to help" : "People benefited",
+      icon: Users,
+    },
+    {
+      title: "Active Volunteers",
+      value: stats.activeVolunteers,
+      subtitle: stats.activeVolunteers === 0 ? "Onboarding volunteers" : "Active helpers",
+      icon: Eye,
+    },
+  ]
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
@@ -17,12 +74,7 @@ export default function TransparencyPage() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
-          {[
-            { title: "Total Donations", value: 0, subtitle: "Be the first to donate", icon: FileText },
-            { title: "Verified Medicines", value: 0, subtitle: "Pending verifications", icon: Shield },
-            { title: "Distributed", value: 0, subtitle: "Ready to distribute", icon: Users },
-            { title: "Active NGOs", value: 0, subtitle: "Onboarding partners", icon: Eye },
-          ].map((stat, idx) => (
+          {statsConfig.map((stat, idx) => (
             <Card
               key={stat.title}
               className="transition-smooth hover-lift animate-fade-in-up"
@@ -33,14 +85,16 @@ export default function TransparencyPage() {
                 <stat.icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="text-2xl font-bold">
+                  {loading ? <span className="animate-pulse">...</span> : stat.value}
+                </div>
                 <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Process Transparency - Responsive grid */}
+        {/* Process Transparency */}
         <div className="grid md:grid-cols-2 gap-6 md:gap-8 mb-12">
           <Card className="transition-smooth hover-lift animate-fade-in-up" style={{ animationDelay: "400ms" }}>
             <CardHeader>
@@ -87,7 +141,7 @@ export default function TransparencyPage() {
           </Card>
         </div>
 
-        {/* Recent Activity - Enhanced empty state */}
+        {/* Recent Activity */}
         <Card className="transition-smooth hover-lift animate-fade-in-up" style={{ animationDelay: "600ms" }}>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>

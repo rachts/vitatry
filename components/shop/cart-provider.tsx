@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useReducer, useEffect } from "react"
 
+
 interface CartItem {
   productId: string
   name: string
@@ -19,7 +20,7 @@ interface CartState {
 }
 
 type CartAction =
-  | { type: "ADD_ITEM"; payload: { productId: string; quantity: number } }
+  | { type: "ADD_ITEM"; payload: CartItem }
   | { type: "REMOVE_ITEM"; payload: { productId: string } }
   | { type: "UPDATE_QUANTITY"; payload: { productId: string; quantity: number } }
   | { type: "CLEAR_CART" }
@@ -36,6 +37,14 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
+
+const calculateTotal = (items: CartItem[]): number => {
+  return items.reduce((total, item) => total + item.price * item.quantity, 0)
+}
+
+const calculateItemCount = (items: CartItem[]): number => {
+  return items.reduce((count, item) => count + item.quantity, 0)
+}
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
@@ -55,8 +64,13 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           itemCount: calculateItemCount(updatedItems),
         }
       } else {
-        // We'll need to fetch product details from the API
-        return state // This will be handled in the addToCart function
+        const updatedItems = [...state.items, action.payload]
+        return {
+          ...state,
+          items: updatedItems,
+          total: calculateTotal(updatedItems),
+          itemCount: calculateItemCount(updatedItems),
+        }
       }
     }
 
@@ -102,14 +116,6 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
   }
 }
 
-const calculateTotal = (items: CartItem[]): number => {
-  return items.reduce((total, item) => total + item.price * item.quantity, 0)
-}
-
-const calculateItemCount = (items: CartItem[]): number => {
-  return items.reduce((count, item) => count + item.quantity, 0)
-}
-
 const initialState: CartState = {
   items: [],
   total: 0,
@@ -148,40 +154,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           payload: { productId, quantity: existingItem.quantity + quantity },
         })
       } else {
-        // Fetch product details
-        const response = await fetch(`/api/shop/products/${productId}`)
-        if (!response.ok) {
-          throw new Error("Failed to fetch product details")
-        }
+        // Fetch product details from API
+        const res = await fetch("/api/medicines")
+        const json = await res.json()
+        const medicines = json.medicines || []
+        const med = medicines.find((m: any) => (m.id || m._id) === productId)
 
-        const product = await response.json()
+        if (!med) {
+          throw new Error("Product not found")
+        }
 
         const newItem: CartItem = {
-          productId: product._id,
-          name: product.name,
-          price: product.price,
-          quantity: Math.min(quantity, product.inStock),
-          imageUrl: product.imageUrl,
-          inStock: product.inStock,
+          productId: med.id || med._id,
+          name: med.name,
+          price: 0,
+          quantity: Math.min(quantity, med.quantity || 0),
+          imageUrl: med.imageUrls?.[0] || "/placeholder.svg",
+          inStock: med.quantity || 0,
         }
 
-        const updatedItems = [...state.items, newItem]
-        dispatch({
-          type: "LOAD_CART",
-          payload: {
-            items: updatedItems,
-            total: calculateTotal(updatedItems),
-            itemCount: calculateItemCount(updatedItems),
-          },
-        })
+        dispatch({ type: "ADD_ITEM", payload: newItem })
       }
-
-      // Sync with server
-      await fetch("/api/shop/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity }),
-      })
     } catch (error) {
       console.error("Error adding to cart:", error)
       throw error
@@ -191,13 +184,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeFromCart = async (productId: string) => {
     try {
       dispatch({ type: "REMOVE_ITEM", payload: { productId } })
-
-      // Sync with server
-      await fetch("/api/shop/cart", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
-      })
     } catch (error) {
       console.error("Error removing from cart:", error)
       throw error
@@ -210,13 +196,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         await removeFromCart(productId)
       } else {
         dispatch({ type: "UPDATE_QUANTITY", payload: { productId, quantity } })
-
-        // Sync with server
-        await fetch("/api/shop/cart", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId, quantity }),
-        })
       }
     } catch (error) {
       console.error("Error updating quantity:", error)
@@ -227,13 +206,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCart = async () => {
     try {
       dispatch({ type: "CLEAR_CART" })
-
-      // Sync with server
-      await fetch("/api/shop/cart", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clearAll: true }),
-      })
     } catch (error) {
       console.error("Error clearing cart:", error)
       throw error
